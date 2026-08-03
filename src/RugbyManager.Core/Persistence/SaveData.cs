@@ -19,6 +19,7 @@ public sealed record SaveData
     public int NextRound { get; init; }
     public int SeasonNumber { get; init; } = 1;
     public int Tier { get; init; } = Pyramid.StartingTier;
+    public string ManagerName { get; init; } = "";
     public List<string> News { get; init; } = new();
     public TrainingFocus Training { get; init; } = TrainingFocus.Fitness;
     public required List<TeamData> Teams { get; init; }
@@ -31,6 +32,10 @@ public sealed record TeamData
 {
     public required string Name { get; init; }
     public required string ShortName { get; init; }
+    public string HomeGround { get; init; } = "";
+    public string PrimaryColour { get; init; } = "#7c3aed";
+    public string SecondaryColour { get; init; } = "#a855f7";
+    public string? CrestImageDataUrl { get; init; }
     public int Money { get; init; }
     public required Tactics Tactics { get; init; }
     public required List<PlayerData> Players { get; init; }
@@ -45,10 +50,12 @@ public sealed record PlayerData
     public required string FirstName { get; init; }
     public required string LastName { get; init; }
     public int Age { get; init; }
+    public Nationality Nationality { get; init; } = Nationality.Unspecified;
     public int Condition { get; init; } = 100;
     public int InjuredWeeksRemaining { get; init; }
     public int Scouted { get; init; } = 100;
     public Dictionary<string, int> TrainingGains { get; init; } = new();
+    public Dictionary<int, CareerPlayerStats> CareerStats { get; init; } = new();
     public required PlayerAttributes Attributes { get; init; }
 }
 

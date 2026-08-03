@@ -1,6 +1,8 @@
 @page "/career/new"
 @inject GameService Game
 @inject NavigationManager Nav
+@inject SupabaseAuthService Auth
+@inject CloudSaveService Cloud
 
 <PageTitle>New Career — Director Of Rugby</PageTitle>
 
@@ -18,11 +20,134 @@
     </div>
 }
 
+<div class="card" style="margin-top:@(_hasSave ? "1rem" : "0");">
+    <h3>Cloud saves</h3>
+    @if (!Auth.IsSignedIn)
+    {
+        <p class="hint">Sign in to save your career to the cloud and continue it from any device.</p>
+        <div class="form-row">
+            <label>Email <input type="email" @bind="_authEmail" /></label>
+            <label>Password <input type="password" @bind="_authPassword" /></label>
+        </div>
+        <div class="hero-actions">
+            <button class="btn btn-primary" @onclick="SignIn">Sign in</button>
+            <button class="btn btn-ghost" @onclick="SignUp">Create account</button>
+        </div>
+        @if (_authMessage is not null)
+        {
+            <p class="action-msg">@_authMessage</p>
+        }
+    }
+    else
+    {
+        <p class="hint">Signed in as <b>@Auth.Email</b>. <a href="" @onclick="SignOut" @onclick:preventDefault>Sign out</a></p>
+
+        @if (_cloudError is not null)
+        {
+            <p class="action-msg warn">@_cloudError</p>
+        }
+
+        @if (_cloudSaves is { Count: > 0 })
+        {
+            <div class="stack-rows">
+                @foreach (var save in _cloudSaves)
+                {
+                    <div class="stack-row">
+                        <span>@save.Name <span class="muted">(@save.UpdatedAt.LocalDateTime.ToString("g"))</span></span>
+                        <span>
+                            <button class="btn btn-sm btn-primary" @onclick="() => LoadCloud(save.Id)">Load</button>
+                            <button class="btn btn-sm btn-danger" @onclick="() => DeleteCloud(save.Id)">Delete</button>
+                        </span>
+                    </div>
+                }
+            </div>
+        }
+        else if (_cloudSaves is not null)
+        {
+            <p class="hint">No cloud saves yet.</p>
+        }
+
+        @if (Game.Career is not null)
+        {
+            <div class="form-row" style="margin-top:1rem;">
+                <label>Save current career as
+                    <input type="text" @bind="_cloudSaveName" placeholder="@Game.MyClub?.Name" />
+                </label>
+            </div>
+            <div class="hero-actions">
+                <button class="btn btn-primary" @onclick="SaveToCloud">☁ Save to cloud</button>
+            </div>
+        }
+    }
+</div>
+
 <div class="card">
-    <h3>New career</h3>
+    <h3>Manager</h3>
+    <div class="form-row">
+        <label>Your name
+            <input type="text" @bind="_managerName" placeholder="e.g. Alex Carter" maxlength="40" />
+        </label>
+    </div>
+</div>
+
+<div class="card" style="margin-top:1rem;">
+    <div style="display:flex; justify-content:space-between; align-items:center;">
+        <h3 style="margin:0;">Your club</h3>
+        <button class="btn btn-sm btn-ghost" @onclick="SuggestIdentity">🎲 Suggest a club</button>
+    </div>
+    <p class="hint">Pick a suggestion, or fill in your own — name, short code, home ground, colours, and a crest.</p>
+
+    <div class="form-grid">
+        <label>Club name
+            <input type="text" @bind="_name" maxlength="30" />
+        </label>
+        <label>Short code
+            <input type="text" @bind="_shortName" maxlength="4" style="text-transform:uppercase;" />
+        </label>
+        <label>Home ground
+            <input type="text" @bind="_homeGround" maxlength="40" />
+        </label>
+    </div>
+
+    <div class="form-grid" style="margin-top:1rem;">
+        <label>Home colour
+            <input type="color" @bind="_primaryColour" style="height:2.4rem; padding:.2rem; cursor:pointer;" />
+        </label>
+        <label>Away colour
+            <input type="color" @bind="_secondaryColour" style="height:2.4rem; padding:.2rem; cursor:pointer;" />
+        </label>
+        <label>Crest
+            <InputFile OnChange="OnCrestSelected" accept="image/*" />
+        </label>
+    </div>
+
+    <div style="display:flex; align-items:center; gap:1rem; margin-top:1rem;">
+        <svg width="56" height="56" viewBox="0 0 48 48">
+            @if (_crestDataUrl is null)
+            {
+                <defs>
+                    <linearGradient id="previewGrad" x1="0" y1="0" x2="1" y2="1">
+                        <stop offset="0" stop-color="@_primaryColour" />
+                        <stop offset="1" stop-color="@_secondaryColour" />
+                    </linearGradient>
+                </defs>
+                <path d="M24 2 L44 8 V21 C44 33.5 36 42 24 46 C12 42 4 33.5 4 21 V8 Z" fill="url(#previewGrad)" stroke="#241b3d" stroke-width="1.5" />
+                @PreviewInitialMarkup
+            }
+        </svg>
+        @if (_crestDataUrl is not null)
+        {
+            <img src="@_crestDataUrl" width="56" height="56" style="border-radius:10px; object-fit:cover;" alt="Crest preview" />
+            <button class="btn btn-sm" @onclick="() => _crestDataUrl = null">Remove uploaded crest</button>
+        }
+        <span class="hint">Crest preview</span>
+    </div>
+</div>
+
+<div class="card" style="margin-top:1rem;">
+    <h3>League</h3>
     <p class="hint">
-        You'll manage <b>Ashcombe RFC</b>, starting in the @Pyramid.Name(Pyramid.StartingTier) —
-        a fair, mid-table club with room to climb the pyramid.
+        You'll start in the @Pyramid.Name(Pyramid.StartingTier) — a fair, mid-table club with room to climb the pyramid.
     </p>
     <div class="form-row">
         <label>Seed <input type="number" @bind="_seed" /></label>
@@ -35,31 +160,150 @@
         </label>
     </div>
     <div class="hero-actions">
-        <button class="btn btn-primary" @onclick="StartNew">🏉 Start new career</button>
-        <button class="btn" @onclick="StartRandom">🎲 Random seed</button>
+        <button class="btn btn-primary" @onclick="StartNew" disabled="@(!CanStart)">🏉 Start new career</button>
     </div>
+    @if (!CanStart)
+    {
+        <p class="footnote">Enter your name, a club name and short code to continue.</p>
+    }
 </div>
 
 @code {
+    private static readonly (string Name, string Short, string Ground, string Primary, string Secondary)[] Suggestions =
+    {
+        ("Ashcombe RFC", "ASH", "Ashcombe Park", "#7c3aed", "#a855f7"),
+        ("Riverside Rangers", "RIV", "Riverside Ground", "#2563eb", "#38bdf8"),
+        ("Hillcrest Harriers", "HIL", "Hillcrest Meadow", "#16a34a", "#4ade80"),
+        ("Fenwick RUFC", "FEN", "Fenwick Fields", "#dc2626", "#f87171"),
+        ("Barrowfield RUFC", "BAR", "Barrowfield Stadium", "#ea580c", "#fb923c"),
+        ("Kingsford RFC", "KIN", "Kingsford Park", "#0891b2", "#22d3ee"),
+    };
+
     private int _seed = new Random().Next(1, 100_000);
     private int _teamCount = 10;
     private bool _hasSave;
 
+    private string _managerName = "";
+    private string _name = "";
+    private string _shortName = "";
+    private string _homeGround = "";
+    private string _primaryColour = "#7c3aed";
+    private string _secondaryColour = "#a855f7";
+    private string? _crestDataUrl;
+
+    private bool CanStart => _managerName.Trim().Length > 0 && _name.Trim().Length > 0 && _shortName.Trim().Length > 0;
+
+    // The "<text>" SVG tag name collides with Razor's own reserved <text> markup-transition
+    // element (RZ1023) when given attributes, so this one small piece is emitted as raw markup.
+    private MarkupString PreviewInitialMarkup
+    {
+        get
+        {
+            var letter = System.Net.WebUtility.HtmlEncode(_name.Length > 0 ? _name[0].ToString() : "?");
+            return new MarkupString($"<text x=\"24\" y=\"30\" text-anchor=\"middle\" font-family=\"Space Grotesk, sans-serif\" font-weight=\"800\" font-size=\"16\" fill=\"#120c1e\">{letter}</text>");
+        }
+    }
+
+    private string _authEmail = "";
+    private string _authPassword = "";
+    private string? _authMessage;
+    private string? _cloudError;
+    private string _cloudSaveName = "";
+    private List<CloudSaveSummary>? _cloudSaves;
+
     protected override async Task OnInitializedAsync()
     {
         _hasSave = await Game.HasSaveAsync();
+        SuggestIdentity();
+
+        await Auth.EnsureLoadedAsync();
+        if (Auth.IsSignedIn) await RefreshCloudSaves();
+    }
+
+    private async Task SignIn()
+    {
+        _authMessage = await Auth.SignInAsync(_authEmail.Trim(), _authPassword);
+        if (Auth.IsSignedIn) { _authPassword = ""; await RefreshCloudSaves(); }
+    }
+
+    private async Task SignUp()
+    {
+        _authMessage = await Auth.SignUpAsync(_authEmail.Trim(), _authPassword);
+        if (Auth.IsSignedIn) { _authPassword = ""; await RefreshCloudSaves(); }
+    }
+
+    private async Task SignOut()
+    {
+        await Auth.SignOutAsync();
+        _cloudSaves = null;
+    }
+
+    private async Task RefreshCloudSaves()
+    {
+        var (saves, error) = await Cloud.ListAsync();
+        _cloudSaves = saves;
+        _cloudError = error;
+    }
+
+    private async Task SaveToCloud()
+    {
+        if (Game.Career is null) return;
+        var name = _cloudSaveName.Trim().Length > 0 ? _cloudSaveName.Trim() : Game.MyClub!.Name;
+        _cloudError = await Cloud.SaveAsync(name, Game.Career, existingId: null);
+        await RefreshCloudSaves();
+    }
+
+    private async Task LoadCloud(string id)
+    {
+        var (career, error) = await Cloud.LoadAsync(id);
+        if (error is not null) { _cloudError = error; return; }
+        Game.LoadCareer(career!);
+        Nav.NavigateTo("career/dashboard");
+    }
+
+    private async Task DeleteCloud(string id)
+    {
+        _cloudError = await Cloud.DeleteAsync(id);
+        await RefreshCloudSaves();
+    }
+
+    private void SuggestIdentity()
+    {
+        var pick = Suggestions[Random.Shared.Next(Suggestions.Length)];
+        _name = pick.Name;
+        _shortName = pick.Short;
+        _homeGround = pick.Ground;
+        _primaryColour = pick.Primary;
+        _secondaryColour = pick.Secondary;
+        _crestDataUrl = null;
+    }
+
+    private async Task OnCrestSelected(InputFileChangeEventArgs e)
+    {
+        const long maxSize = 512 * 1024;
+        var file = e.File;
+        if (file.Size > maxSize) return;
+
+        using var stream = file.OpenReadStream(maxSize);
+        using var ms = new MemoryStream();
+        await stream.CopyToAsync(ms);
+        _crestDataUrl = $"data:{file.ContentType};base64,{Convert.ToBase64String(ms.ToArray())}";
     }
 
     private void StartNew()
     {
-        Game.StartNewCareer(_seed, _teamCount);
+        if (!CanStart) return;
+        var identity = new ClubIdentity
+        {
+            Name = _name.Trim(),
+            ShortName = _shortName.Trim().ToUpperInvariant(),
+            HomeGround = _homeGround.Trim(),
+            PrimaryColour = _primaryColour,
+            SecondaryColour = _secondaryColour,
+            CrestImageDataUrl = _crestDataUrl,
+        };
+        Game.StartNewCareer(_seed, _teamCount, _managerName.Trim(), identity);
         Nav.NavigateTo("career/dashboard");
-    }
-
-    private void StartRandom()
-    {
-        _seed = Random.Shared.Next(1, 100_000);
-        StartNew();
     }
 
     private async Task Continue()

@@ -43,7 +43,7 @@
     private RenderFragment GroupTable(List<Player> players, HashSet<Player> xv, int groupIndex) => @<table class="league squad-table">
         <thead>
             <tr>
-                <th class="l">Pos</th><th class="l">Name</th><th>Age</th><th class="l">Rating</th><th class="l">Status</th><th></th>
+                <th class="l">Pos</th><th class="l">Name</th><th class="l">Nat</th><th>Age</th><th class="l">Rating</th><th class="l">Status</th><th></th>
             </tr>
         </thead>
         <tbody>
@@ -56,6 +56,7 @@
                 <tr>
                     <td class="l">@p.NaturalPosition.ShortName()</td>
                     <td class="l"><a href="@($"career/player/{club.Squad.IndexOf(p)}")">@p.FullName</a> <span class="muted">(@p.Age)</span></td>
+                    <td class="l" title="@p.Nationality.DisplayName()">@p.Nationality.Code()</td>
                     <td>@p.Age</td>
                     <td class="l">
                         <div class="rating-cell">

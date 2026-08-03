@@ -160,9 +160,9 @@ public class SeasonTests
         season.PlayAll();
 
         var champion = season.BuildTable().Rows[0];
-        Assert.Equal("MRL", champion.Team.ShortName);
-        Assert.Equal(69, champion.LeaguePoints);
-        Assert.Equal(207, champion.PointsDiff);
+        Assert.Equal("HIL", champion.Team.ShortName);
+        Assert.Equal(76, champion.LeaguePoints);
+        Assert.Equal(364, champion.PointsDiff);
     }
 
     private static MatchResult Result(Team home, Team away, int homeScore, int awayScore, int homeTries, int awayTries)

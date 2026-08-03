@@ -24,6 +24,9 @@ public sealed class Career
     /// <summary>1-based season counter for this career.</summary>
     public int SeasonNumber { get; set; } = 1;
 
+    /// <summary>The manager's own name, set at career creation. Flavour only.</summary>
+    public string ManagerName { get; set; } = "";
+
     /// <summary>Division tier: 0 = top flight, higher = further down the pyramid.</summary>
     public int Tier { get; set; } = Pyramid.StartingTier;
 

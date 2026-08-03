@@ -17,6 +17,10 @@ public sealed class Season
     public IReadOnlyList<Fixture> Fixtures { get; }
     public int Rounds { get; }
 
+    /// <summary>1-based season number this instance represents — set by <c>Career</c> at
+    /// creation, so per-match roll-ups (career player stats) accumulate into the right bucket.</summary>
+    public int SeasonNumber { get; set; } = 1;
+
     private int _nextRound;
 
     public Season(League league, int seed)
@@ -65,20 +69,46 @@ public sealed class Season
             if (fx.IsPlayed || ReferenceEquals(fx, exclude)) continue;
             fx.Home.SelectBestXV();
             fx.Away.SelectBestXV();
-            var result = new MatchEngine(fx.Home, fx.Away, MatchSeed(fx)).Simulate();
-            RecordFixtureResult(fx, result);
+            var engine = new MatchEngine(fx.Home, fx.Away, MatchSeed(fx));
+            var result = engine.Simulate();
+            RecordFixtureResult(fx, result, engine.PlayerStats);
         }
         return roundFixtures;
     }
 
     /// <summary>Records a fixture's outcome (from any source — instant sim or a live, stepped
-    /// Match Centre engine) and rolls the deterministic post-match injuries for it.</summary>
-    public void RecordFixtureResult(Fixture fx, MatchResult result)
+    /// Match Centre engine) and rolls the deterministic post-match injuries for it. Also rolls
+    /// individual contributions into each player's career stats for this season, if supplied.</summary>
+    public void RecordFixtureResult(Fixture fx, MatchResult result, IReadOnlyDictionary<Player, PlayerMatchStats>? playerStats = null)
     {
         fx.Result = result;
         var injuryDice = new Dice(unchecked(MatchSeed(fx) * 7 + 13));
         InjuryService.RollMatchInjuries(fx.Home, injuryDice);
         InjuryService.RollMatchInjuries(fx.Away, injuryDice);
+
+        if (playerStats is not null) RollUpCareerStats(playerStats);
+    }
+
+    private void RollUpCareerStats(IReadOnlyDictionary<Player, PlayerMatchStats> playerStats)
+    {
+        foreach (var (player, s) in playerStats)
+        {
+            if (!player.CareerStats.TryGetValue(SeasonNumber, out var totals))
+                player.CareerStats[SeasonNumber] = totals = new CareerPlayerStats();
+
+            totals.MatchesPlayed++;
+            totals.Tries += s.Tries;
+            totals.Assists += s.Assists;
+            totals.Conversions += s.Conversions;
+            totals.PenaltyGoals += s.PenaltyGoals;
+            totals.Carries += s.Carries;
+            totals.MetresGained += s.MetresGained;
+            totals.DefendersBeaten += s.DefendersBeaten;
+            totals.Passes += s.Passes;
+            totals.Tackles += s.Tackles;
+            totals.TurnoversWon += s.TurnoversWon;
+            totals.Errors += s.Errors;
+        }
     }
 
     /// <summary>Advances to the next round once every fixture in the current one is settled.</summary>

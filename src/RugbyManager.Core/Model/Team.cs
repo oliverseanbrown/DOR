@@ -11,8 +11,17 @@ public sealed class Team
 {
     private static readonly Position[] AllPositions = Enum.GetValues<Position>();
 
-    public required string Name { get; init; }
-    public required string ShortName { get; init; }
+    public required string Name { get; set; }
+    public required string ShortName { get; set; }
+
+    /// <summary>Club identity — cosmetic, set at career creation (or defaulted for CPU clubs).</summary>
+    public string HomeGround { get; set; } = "";
+    public string PrimaryColour { get; set; } = "#7c3aed";
+    public string SecondaryColour { get; set; } = "#a855f7";
+
+    /// <summary>A user-uploaded crest, as a data URL (e.g. "data:image/png;base64,..."). Null
+    /// falls back to a generated crest badge coloured from <see cref="PrimaryColour"/>/<see cref="SecondaryColour"/>.</summary>
+    public string? CrestImageDataUrl { get; set; }
 
     /// <summary>Every contracted player. Includes reserves beyond the starting XV.</summary>
     public required List<Player> Squad { get; init; }

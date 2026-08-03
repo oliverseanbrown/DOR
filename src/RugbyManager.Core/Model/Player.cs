@@ -15,6 +15,8 @@ public sealed class Player
     /// <summary>The position the player is naturally best in.</summary>
     public Position NaturalPosition { get; init; }
 
+    public Nationality Nationality { get; init; } = Nationality.Unspecified;
+
     public required PlayerAttributes Attributes { get; init; }
 
     /// <summary>
@@ -40,6 +42,10 @@ public sealed class Player
     /// (100); market players start largely unknown and are revealed by scouting.
     /// </summary>
     public int Scouted { get; set; } = 100;
+
+    /// <summary>Cumulative match contribution, keyed by season number, persisted across the
+    /// whole career — lets the Player screen show "this season" and career-to-date totals.</summary>
+    public Dictionary<int, CareerPlayerStats> CareerStats { get; init; } = new();
 
     public string FullName => $"{FirstName} {LastName}";
 

@@ -49,16 +49,39 @@ public sealed class GameService
     //  Career lifecycle
     // ------------------------------------------------------------------
 
-    public void StartNewCareer(int seed, int teamCount)
+    public void StartNewCareer(int seed, int teamCount, string managerName, ClubIdentity identity)
     {
         var league = LeagueGenerator.Generate(
             Pyramid.Name(Pyramid.StartingTier), teamCount, seed,
             firstClubQuality: 64, baseQuality: Pyramid.BaseQuality(Pyramid.StartingTier));
-        league.Teams[0].Money = 150_000;
+        var myClub = league.Teams[0];
+        myClub.Money = 150_000;
+
+        // The manager's chosen identity replaces the generated placeholder for slot 0 — the
+        // squad and its (already-boosted) quality are untouched, only the club's branding.
+        myClub.Name = identity.Name;
+        myClub.ShortName = identity.ShortName;
+        myClub.HomeGround = identity.HomeGround;
+        myClub.PrimaryColour = identity.PrimaryColour;
+        myClub.SecondaryColour = identity.SecondaryColour;
+        myClub.CrestImageDataUrl = identity.CrestImageDataUrl;
 
         var market = MarketGenerator.Generate(count: 40, seed: seed + 5000);
         var coachMarket = CoachGenerator.Generate(count: 20, seed: seed + 7000);
-        Career = new Career(league.CreateSeason(seed), myTeamIndex: 0, market, coachMarket);
+        Career = new Career(league.CreateSeason(seed), myTeamIndex: 0, market, coachMarket)
+        {
+            ManagerName = managerName,
+        };
+        LastRound = null;
+        RecentNews.Clear();
+        NotifyChanged();
+    }
+
+    /// <summary>Adopts an already-deserialized career (e.g. one just pulled down from a cloud
+    /// save) as the active one — the local-storage equivalent of <see cref="TryLoadAsync"/>.</summary>
+    public void LoadCareer(Career career)
+    {
+        Career = career;
         LastRound = null;
         RecentNews.Clear();
         NotifyChanged();
@@ -326,7 +349,7 @@ public sealed class GameService
         if (LiveMatch is not null && LiveFixture is not null)
         {
             result = LiveMatch.BuildResult();
-            season.RecordFixtureResult(LiveFixture, result);
+            season.RecordFixtureResult(LiveFixture, result, LiveMatch.PlayerStats);
             homeGame = ReferenceEquals(LiveFixture.Home, MyClub);
             TrainingService.DepleteAfterMatch(MyClub!);
         }

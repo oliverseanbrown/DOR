@@ -11,5 +11,7 @@ builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(builder.
 builder.Services.AddScoped<GameService>();
 builder.Services.AddScoped<PlaybackSettingsService>();
 builder.Services.AddScoped<ThemeService>();
+builder.Services.AddScoped<SupabaseAuthService>();
+builder.Services.AddScoped<CloudSaveService>();
 
 await builder.Build().RunAsync();

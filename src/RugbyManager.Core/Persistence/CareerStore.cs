@@ -48,6 +48,10 @@ public static class CareerStore
             {
                 Name = team.Name,
                 ShortName = team.ShortName,
+                HomeGround = team.HomeGround,
+                PrimaryColour = team.PrimaryColour,
+                SecondaryColour = team.SecondaryColour,
+                CrestImageDataUrl = team.CrestImageDataUrl,
                 Money = team.Money,
                 Tactics = team.Tactics,
                 Players = players,
@@ -83,6 +87,7 @@ public static class CareerStore
             Tier = career.Tier,
             News = new List<string>(career.News),
             Training = career.Training,
+            ManagerName = career.ManagerName,
             Teams = teams,
             Results = results,
             Market = market,
@@ -96,10 +101,12 @@ public static class CareerStore
         FirstName = p.FirstName,
         LastName = p.LastName,
         Age = p.Age,
+        Nationality = p.Nationality,
         Condition = p.Condition,
         InjuredWeeksRemaining = p.InjuredWeeksRemaining,
         Scouted = p.Scouted,
         TrainingGains = new Dictionary<string, int>(p.TrainingGains),
+        CareerStats = new Dictionary<int, CareerPlayerStats>(p.CareerStats),
         Attributes = p.Attributes,
     };
 
@@ -109,10 +116,12 @@ public static class CareerStore
         LastName = pd.LastName,
         Age = pd.Age,
         NaturalPosition = pd.Position,
+        Nationality = pd.Nationality,
         Condition = pd.Condition,
         InjuredWeeksRemaining = pd.InjuredWeeksRemaining,
         Scouted = pd.Scouted,
         TrainingGains = new Dictionary<string, int>(pd.TrainingGains),
+        CareerStats = new Dictionary<int, CareerPlayerStats>(pd.CareerStats),
         Attributes = pd.Attributes,
     };
 
@@ -127,6 +136,10 @@ public static class CareerStore
             {
                 Name = td.Name,
                 ShortName = td.ShortName,
+                HomeGround = td.HomeGround,
+                PrimaryColour = td.PrimaryColour,
+                SecondaryColour = td.SecondaryColour,
+                CrestImageDataUrl = td.CrestImageDataUrl,
                 Money = td.Money,
                 Squad = td.Players.Select(PlayerFrom).ToList(),
                 Tactics = td.Tactics,
@@ -141,7 +154,7 @@ public static class CareerStore
         var league = new League { Name = data.LeagueName, Teams = teams };
 
         // Regenerate the identical schedule, then re-apply the saved results.
-        var season = new Season(league, data.Seed);
+        var season = new Season(league, data.Seed) { SeasonNumber = data.SeasonNumber };
         var byIndex = season.Fixtures.ToDictionary(f => f.Index);
         foreach (var rd in data.Results)
         {
@@ -168,6 +181,7 @@ public static class CareerStore
             Training = data.Training,
             SeasonNumber = data.SeasonNumber,
             Tier = data.Tier,
+            ManagerName = data.ManagerName,
         };
         career.News.AddRange(data.News);
         return career;

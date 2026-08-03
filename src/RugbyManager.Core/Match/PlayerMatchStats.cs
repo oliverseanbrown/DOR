@@ -15,6 +15,7 @@ public sealed class PlayerMatchStats
     public int TurnoversWon { get; set; }
     public int Errors { get; set; }
     public int Tries { get; set; }
+    public int Assists { get; set; }
     public int Conversions { get; set; }
     public int PenaltyGoals { get; set; }
 
@@ -25,6 +26,7 @@ public sealed class PlayerMatchStats
         {
             double r = 6.0
                 + Tries * 1.5
+                + Assists * 0.6
                 + Conversions * 0.4
                 + PenaltyGoals * 0.5
                 + DefendersBeaten * 0.3

@@ -44,7 +44,7 @@ public static class SeasonTransition
 
         var market = MarketGenerator.Generate(40, seed + 5000);
         var coachMarket = CoachGenerator.Generate(20, seed + 7000);
-        var season = new Season(league, seed);
+        var season = new Season(league, seed) { SeasonNumber = seasonNumber };
 
         var next = new Career(season, myTeamIndex: 0, market, coachMarket)
         {

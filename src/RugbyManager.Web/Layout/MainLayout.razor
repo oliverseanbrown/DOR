@@ -6,25 +6,34 @@
 <div class="app-shell">
     <header class="header-bar">
         <a href="" style="text-decoration:none; display:flex; align-items:center; gap:.6rem; color:inherit;">
-            <svg class="crest" width="34" height="34" viewBox="0 0 48 48">
-                <defs>
-                    <linearGradient id="crestGrad" x1="0" y1="0" x2="1" y2="1">
-                        <stop offset="0" stop-color="#a855f7" />
-                        <stop offset="1" stop-color="#7c3aed" />
-                    </linearGradient>
-                </defs>
-                <path d="M24 2 L44 8 V21 C44 33.5 36 42 24 46 C12 42 4 33.5 4 21 V8 Z" fill="url(#crestGrad)" stroke="#241b3d" stroke-width="1.5" />
-                <path d="M24 5 L41 10.3 V21 C41 32 34 39.5 24 43 C14 39.5 7 32 7 21 V10.3 Z" fill="none" stroke="rgba(255,255,255,.25)" stroke-width="1" />
-                <g transform="translate(24,20) rotate(-28)">
-                    <ellipse cx="0" cy="0" rx="11" ry="6.4" fill="#f2eefc" />
-                    <path d="M-9 0 H9" stroke="#7c3aed" stroke-width="1.1" />
-                    <path d="M-3.6 -2 V2 M0 -2.6 V2.6 M3.6 -2 V2" stroke="#7c3aed" stroke-width="1" />
-                </g>
-                <text x="24" y="40.5" text-anchor="middle" font-family="Space Grotesk, sans-serif" font-weight="800" font-size="9" fill="#120c1e">@(Game.MyClub is { } c && c.Name.Length > 0 ? c.Name[0].ToString() : "D")</text>
-            </svg>
+            @if (Game.MyClub?.CrestImageDataUrl is { } img)
+            {
+                <img class="crest" src="@img" width="34" height="34" style="border-radius:8px; object-fit:cover;" alt="Club crest" />
+            }
+            else
+            {
+                var primary = Game.MyClub?.PrimaryColour ?? "#a855f7";
+                var secondary = Game.MyClub?.SecondaryColour ?? "#7c3aed";
+                <svg class="crest" width="34" height="34" viewBox="0 0 48 48">
+                    <defs>
+                        <linearGradient id="crestGrad" x1="0" y1="0" x2="1" y2="1">
+                            <stop offset="0" stop-color="@primary" />
+                            <stop offset="1" stop-color="@secondary" />
+                        </linearGradient>
+                    </defs>
+                    <path d="M24 2 L44 8 V21 C44 33.5 36 42 24 46 C12 42 4 33.5 4 21 V8 Z" fill="url(#crestGrad)" stroke="#241b3d" stroke-width="1.5" />
+                    <path d="M24 5 L41 10.3 V21 C41 32 34 39.5 24 43 C14 39.5 7 32 7 21 V10.3 Z" fill="none" stroke="rgba(255,255,255,.25)" stroke-width="1" />
+                    <g transform="translate(24,20) rotate(-28)">
+                        <ellipse cx="0" cy="0" rx="11" ry="6.4" fill="#f2eefc" />
+                        <path d="M-9 0 H9" stroke="@secondary" stroke-width="1.1" />
+                        <path d="M-3.6 -2 V2 M0 -2.6 V2.6 M3.6 -2 V2" stroke="@secondary" stroke-width="1" />
+                    </g>
+                    <text x="24" y="40.5" text-anchor="middle" font-family="Space Grotesk, sans-serif" font-weight="800" font-size="9" fill="#120c1e">@(Game.MyClub is { } c && c.Name.Length > 0 ? c.Name[0].ToString() : "D")</text>
+                </svg>
+            }
             <span class="brand-block">
                 <span class="bb-name">@(Game.MyClub?.Name ?? "Director Of Rugby")</span>
-                <span class="bb-meta">@(Game.Career is not null ? Game.Career.Season.League.Name : "Union management sim")</span>
+                <span class="bb-meta">@(Game.Career is not null ? $"{Game.Career.ManagerName} · {Game.Career.Season.League.Name}" : "Union management sim")</span>
             </span>
         </a>
 

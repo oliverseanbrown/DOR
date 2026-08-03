@@ -13,7 +13,7 @@
 
     <h1>@p.FullName</h1>
     <p class="hint">
-        @p.NaturalPosition.ShortName() (@p.NaturalPosition) · Age @p.Age · Overall @PlayerRating.Overall(p)
+        @p.NaturalPosition.ShortName() (@p.NaturalPosition) · @p.Nationality.DisplayName() · Age @p.Age · Overall @PlayerRating.Overall(p)
         · <b>@PlayerStyle.Determine(p)</b>
         · @(!p.IsFit ? $"INJURED, {p.InjuredWeeksRemaining}w" : inXv ? "Starting XV" : "Bench")
     </p>
@@ -44,6 +44,65 @@
         <p class="footnote">
             Career training gains: @string.Join(", ", p.TrainingGains.OrderByDescending(g => g.Value).Select(g => $"{Spaced(g.Key)} +{g.Value}"))
         </p>
+    }
+
+    @if (p.CareerStats.Count > 0)
+    {
+        <div class="grp-title">Match statistics</div>
+        <div class="card" style="padding:0;">
+            <table class="league">
+                <thead>
+                    <tr>
+                        <th class="l">Season</th><th>MP</th><th>Tries</th><th>Assists</th><th>Cons</th><th>Pens</th>
+                        <th>Carries</th><th>Metres</th><th>Tackles</th><th>TOs</th><th>Errors</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var (season, s) in p.CareerStats.OrderBy(kv => kv.Key))
+                    {
+                        <tr>
+                            <td class="l">Season @season</td>
+                            <td>@s.MatchesPlayed</td>
+                            <td>@s.Tries</td>
+                            <td>@s.Assists</td>
+                            <td>@s.Conversions</td>
+                            <td>@s.PenaltyGoals</td>
+                            <td>@s.Carries</td>
+                            <td>@($"{s.MetresGained:0}")</td>
+                            <td>@s.Tackles</td>
+                            <td>@s.TurnoversWon</td>
+                            <td>@s.Errors</td>
+                        </tr>
+                    }
+                    @if (p.CareerStats.Count > 1)
+                    {
+                        var totalMp = p.CareerStats.Values.Sum(s => s.MatchesPlayed);
+                        var totalTries = p.CareerStats.Values.Sum(s => s.Tries);
+                        var totalAssists = p.CareerStats.Values.Sum(s => s.Assists);
+                        var totalCons = p.CareerStats.Values.Sum(s => s.Conversions);
+                        var totalPens = p.CareerStats.Values.Sum(s => s.PenaltyGoals);
+                        var totalCarries = p.CareerStats.Values.Sum(s => s.Carries);
+                        var totalMetres = p.CareerStats.Values.Sum(s => s.MetresGained);
+                        var totalTackles = p.CareerStats.Values.Sum(s => s.Tackles);
+                        var totalTos = p.CareerStats.Values.Sum(s => s.TurnoversWon);
+                        var totalErrors = p.CareerStats.Values.Sum(s => s.Errors);
+                        <tr style="font-weight:700;">
+                            <td class="l">Career total</td>
+                            <td>@totalMp</td>
+                            <td>@totalTries</td>
+                            <td>@totalAssists</td>
+                            <td>@totalCons</td>
+                            <td>@totalPens</td>
+                            <td>@totalCarries</td>
+                            <td>@($"{totalMetres:0}")</td>
+                            <td>@totalTackles</td>
+                            <td>@totalTos</td>
+                            <td>@totalErrors</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
     }
 }
 else

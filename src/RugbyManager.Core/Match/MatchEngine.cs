@@ -489,7 +489,7 @@ public sealed class MatchEngine
                 StatsFor(carrier).Passes++;
                 StatsFor(support).DefendersBeaten++;
                 Log(MatchEventType.LineBreak, _c.OffloadBeat(carrier.ShortName, support.ShortName), att, Drama.Highlight);
-                ScoreTry(att, support, wide: false, breakaway: true, line: _c.BreakawayTryVia(move, support.ShortName, Name(att)));
+                ScoreTry(att, support, wide: false, breakaway: true, line: _c.BreakawayTryVia(move, support.ShortName, Name(att)), assistedBy: carrier);
             }
             else
             {
@@ -710,10 +710,11 @@ public sealed class MatchEngine
     // ------------------------------------------------------------------
     //  Scoring
     // ------------------------------------------------------------------
-    private void ScoreTry(int team, Player scorer, bool wide, bool viaMaul = false, bool breakaway = false, string? line = null)
+    private void ScoreTry(int team, Player scorer, bool wide, bool viaMaul = false, bool breakaway = false, string? line = null, Player? assistedBy = null)
     {
         _teams[team].Stats.Tries++;
         StatsFor(scorer).Tries++;
+        if (assistedBy is not null) StatsFor(assistedBy).Assists++;
         string text = line
             ?? (breakaway ? _c.BreakawayTry(scorer.ShortName, Name(team))
             : viaMaul ? _c.MaulTry(Name(team))

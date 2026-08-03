@@ -1,3 +1,4 @@
+using System.Linq;
 using RugbyManager.Core.Model;
 using static RugbyManager.Core.Model.Position;
 
@@ -24,6 +25,9 @@ public static class SquadGenerator
         "Watson", "Etzebeth", "du Plessis", "Cane", "Savea", "Hogg", "May", "Daly", "Vunipola",
         "Ford", "Nienaber", "Marx", "O'Mahony", "Ringrose", "Beard", "Faletau",
     };
+
+    private static readonly Nationality[] Nations = Enum.GetValues<Nationality>()
+        .Where(n => n != Nationality.Unspecified).ToArray();
 
     // Reserve slots so every unit has some cover; the rest is handled out of position.
     private static readonly Position[] ReservePositions =
@@ -75,6 +79,7 @@ public static class SquadGenerator
             LastName = last,
             Age = ageOverride ?? rng.Next(19, 34),
             NaturalPosition = pos,
+            Nationality = Nations[rng.Next(Nations.Length)],
             Attributes = attributes,
         };
     }
