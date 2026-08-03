@@ -384,9 +384,7 @@ public sealed class MatchEngine
 
         if (lineBreak)
         {
-            StatsFor(runner!).Carries++;
-            StatsFor(runner!).MetresGained += gain;
-            Log(MatchEventType.LineBreak, _c.LineBreak(runner!.ShortName, Name(att)), att, Drama.Highlight);
+            ResolveRoutineLineBreak(att, def, runner!, gain);
         }
         else
         {
@@ -401,6 +399,39 @@ public sealed class MatchEngine
             if (DistToScore(att) <= 0) ScoreTry(att, carrier, wide: false);
         }
         // else: possession & situation unchanged — another phase follows.
+    }
+
+    /// <summary>
+    /// A line-break that gains good ground but doesn't quite reach the try line this phase gets
+    /// told as a short three-beat sequence — how the gap was made, the runner hitting it, and
+    /// how the defence responds (a covering tackle, or forcing an error) — rather than a single
+    /// flat "big metres" line with no context for how it started or ended.
+    /// </summary>
+    private void ResolveRoutineLineBreak(int att, int def, Player runner, double gain)
+    {
+        var creator = PickSupportRunner(att, runner);
+        StatsFor(creator).Passes++;
+        Log(MatchEventType.LineBreak, _c.GapCreated(creator.ShortName, Name(att)), att, Drama.Highlight);
+
+        StatsFor(runner).Carries++;
+        StatsFor(runner).MetresGained += gain;
+        Log(MatchEventType.LineBreak, _c.ThroughTheGap(runner.ShortName, creator.ShortName), att, Drama.Highlight);
+
+        // The covering defence usually hauls the runner down; sometimes they instead spill it
+        // looking for one pass too many under pressure — a mistake, not a stop.
+        if (_dice.Chance(0.78))
+        {
+            var coveringDefender = PickDefender(def);
+            StatsFor(coveringDefender).Tackles++;
+            Log(MatchEventType.LineBreak, _c.CoveringTackle(coveringDefender.ShortName, Name(def), runner.ShortName), def, Drama.Highlight);
+        }
+        else
+        {
+            StatsFor(runner).Errors++;
+            _teams[att].Stats.KnockOns++;
+            Log(MatchEventType.KnockOn, _c.BreakMistake(runner.ShortName, Name(att)), def, Drama.Highlight);
+            _setOwner = def; _situation = Situation.Scrum;
+        }
     }
 
     /// <summary>Inside this range of the line, a break leaves no time for anyone to cover it —

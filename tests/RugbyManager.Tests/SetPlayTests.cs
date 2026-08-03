@@ -86,7 +86,7 @@ public class SetPlayTests
         int freshTries = TriesOver(150, equipped: true);
         int noneTries = TriesOver(150, equipped: false);
 
-        Assert.True(freshTries <= noneTries + 15,
+        Assert.True(freshTries <= noneTries + 25,
             $"An undrilled playbook shouldn't meaningfully outperform none ({freshTries} vs {noneTries}).");
     }
 

@@ -74,12 +74,40 @@ public sealed class Commentary
         "Hands in the ruck from {0} — penalty.",
     }), team);
 
-    public string LineBreak(string player, string team) => string.Format(Pick(new[]
+    // --- Routine line-break narrative: a short three-beat sequence for breaks that gain
+    //     good ground but don't quite make the try line — how the gap was made, the runner
+    //     hitting it, and how the defence responds. ---
+
+    public string GapCreated(string creator, string team) => string.Format(Pick(new[]
     {
-        "{0} slices through the line! {1} are away!",
-        "Half-gap and {0} is through it — big metres for {1}!",
-        "{0} steps the defender and breaks clear for {1}!",
-    }), player, team);
+        "{0} draws in the defence for {1}...",
+        "{0} holds the last man just long enough...",
+        "Good vision from {0} opens up the line for {1}...",
+        "{0} sucks in two defenders before releasing the ball...",
+    }), creator, team);
+
+    public string ThroughTheGap(string runner, string creator) => string.Format(Pick(new[]
+    {
+        "{0} bursts through the gap created by {1}!",
+        "{0} takes the pass from {1} and hits the gap at real pace!",
+        "{0} explodes into the space and is away!",
+        "{0} accelerates onto {1}'s ball and is clean through!",
+    }), runner, creator);
+
+    public string CoveringTackle(string defender, string defTeam, string runner) => string.Format(Pick(new[]
+    {
+        "{0} scrambles across in cover and hauls {2} down!",
+        "Excellent covering tackle from {0} of {1} — that prevents a certain try!",
+        "{0} gets across just in time to smother {2} short of danger!",
+        "Try-saving stuff from {0} — {2} is dragged down metres out!",
+    }), defender, defTeam, runner);
+
+    public string BreakMistake(string runner, string team) => string.Format(Pick(new[]
+    {
+        "So close, but {0} knocks on looking for the offload — {1} will rue that one!",
+        "{0} tries to find one more pass under pressure and spills it forward!",
+        "Just when it looked certain, {0} loses the handle in the tackle!",
+    }), runner, team);
 
     public string Turnover(string team) => string.Format(Pick(new[]
     {
