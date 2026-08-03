@@ -53,7 +53,7 @@
     private void StartNew()
     {
         Game.StartNewCareer(_seed, _teamCount);
-        Nav.NavigateTo("/career/dashboard");
+        Nav.NavigateTo("career/dashboard");
     }
 
     private void StartRandom()
@@ -65,7 +65,7 @@
     private async Task Continue()
     {
         if (await Game.TryLoadAsync())
-            Nav.NavigateTo("/career/dashboard");
+            Nav.NavigateTo("career/dashboard");
     }
 
     private async Task DeleteSave()

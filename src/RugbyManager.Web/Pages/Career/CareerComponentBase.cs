@@ -17,7 +17,7 @@ public abstract class CareerComponentBase : ComponentBase, IDisposable
     {
         if (Game.Career is null)
         {
-            Nav.NavigateTo("/career/new");
+            Nav.NavigateTo("career/new");
             return;
         }
         Game.Changed += OnChanged;
