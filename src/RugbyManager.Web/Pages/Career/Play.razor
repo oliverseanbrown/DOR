@@ -191,11 +191,16 @@
                 <div class="card feed-panel" style="padding:0;">
                     <h3 style="padding:1rem 1.2rem 0;">Commentary</h3>
                     <div class="feed">
+                        @{
+                            var homeTeam = Game.LiveFixture?.Home;
+                            var awayTeam = Game.LiveFixture?.Away;
+                        }
                         @foreach (var e in Enumerable.Reverse(important))
                         {
-                            <div class="feed-line @LineClass(e)">
+                            var colour = TeamColour(e.Team, homeTeam, awayTeam);
+                            <div class="feed-line @LineClass(e)" style="@(colour is not null ? $"border-left:3px solid {colour};" : "")">
                                 <span class="min">@e.Minute'</span>
-                                <span class="txt">@e.Text</span>
+                                <span class="txt" style="@(colour is not null ? $"color:{colour};" : "")">@e.Text</span>
                             </div>
                         }
                     </div>
@@ -396,6 +401,16 @@
         => events.Where(e => e.Drama == Drama.Highlight
                 || e.Type is MatchEventType.Substitution or MatchEventType.TacticsChange)
             .ToList();
+
+    /// <summary>The club colour a commentary line should be shown in — the home club's primary
+    /// colour for home-side events, the away club's for away-side events, null for neutral lines
+    /// (kickoff, half/full-time) which keep their default styling.</summary>
+    private static string? TeamColour(int? side, Team? home, Team? away) => side switch
+    {
+        0 => home?.PrimaryColour,
+        1 => away?.PrimaryColour,
+        _ => null,
+    };
 
     private static string LineClass(MatchEvent e) => e.Type switch
     {
