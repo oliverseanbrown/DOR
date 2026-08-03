@@ -1,6 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using RugbyManager.Core.Competition;
+using RugbyManager.Core.Facilities;
 using RugbyManager.Core.Match;
 using RugbyManager.Core.Model;
 using RugbyManager.Core.Transfers;
@@ -58,6 +59,17 @@ public static class CareerStore
                 Coaches = new List<Coach>(team.Coaches),
                 Playbook = new List<SetPlay>(team.Playbook),
                 PlayFamiliarity = new Dictionary<string, int>(team.PlayFamiliarity),
+                PitchLevel = team.PitchLevel,
+                StadiumLevel = team.StadiumLevel,
+                TrainingGroundLevel = team.TrainingGroundLevel,
+                ClubhouseLevel = team.ClubhouseLevel,
+                FacilityProjects = team.FacilityProjects.Select(p => new FacilityProjectData
+                {
+                    Area = p.Area,
+                    TargetLevel = p.TargetLevel,
+                    TotalWeeks = p.TotalWeeks,
+                    WeeksRemaining = p.WeeksRemaining,
+                }).ToList(),
             });
         }
 
@@ -146,6 +158,17 @@ public static class CareerStore
                 Coaches = new List<Coach>(td.Coaches),
                 Playbook = new List<SetPlay>(td.Playbook),
                 PlayFamiliarity = new Dictionary<string, int>(td.PlayFamiliarity),
+                PitchLevel = td.PitchLevel,
+                StadiumLevel = td.StadiumLevel,
+                TrainingGroundLevel = td.TrainingGroundLevel,
+                ClubhouseLevel = td.ClubhouseLevel,
+                FacilityProjects = td.FacilityProjects.Select(p => new FacilityProject
+                {
+                    Area = p.Area,
+                    TargetLevel = p.TargetLevel,
+                    TotalWeeks = p.TotalWeeks,
+                    WeeksRemaining = p.WeeksRemaining,
+                }).ToList(),
             };
             team.SelectBestXV();
             teams.Add(team);

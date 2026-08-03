@@ -1,0 +1,110 @@
+@using RugbyManager.Core.Competition
+@using RugbyManager.Core.Model
+@using RugbyManager.Web.Services
+
+<div class="card facility-card">
+    <div class="fc-head">
+        <span class="fc-icon">@Icon</span>
+        <div>
+            <h3>@FacilityService.AreaLabel(Area)</h3>
+            <span class="fc-level">Level @Info.Level — @Info.Name</span>
+        </div>
+    </div>
+
+    <p>@Info.Description</p>
+    <p class="hint">@StatLine</p>
+
+    @if (Project is { } project)
+    {
+        var target = TargetInfo(project);
+        <div class="fc-progress">
+            <div class="stack-row">
+                <span>Building: @target.Name</span>
+                <span class="muted">@project.WeeksRemaining of @project.TotalWeeks week(s) left</span>
+            </div>
+            <div class="stat-bar-track">
+                <div class="stat-bar-fill" style="width:@(Pct(project))%"></div>
+            </div>
+        </div>
+    }
+    else if (Next is { } next)
+    {
+        <div class="fc-next">
+            <div class="chip-row">
+                <span class="chip">Next: @next.Name</span>
+                <span class="chip">@Money(next.Cost)</span>
+                <span class="chip">@next.BuildWeeks week@(next.BuildWeeks == 1 ? "" : "s") to build</span>
+            </div>
+
+            @if (!_confirming)
+            {
+                <button class="btn btn-primary btn-sm" style="margin-top:.7rem;" disabled="@(!CanUpgrade)" title="@BlockedReason" @onclick="() => _confirming = true">
+                    Upgrade to Level @next.Level
+                </button>
+            }
+            else
+            {
+                <div class="action-msg" style="margin-top:.7rem;">
+                    Spend @Money(next.Cost) and start @next.BuildWeeks week@(next.BuildWeeks == 1 ? "" : "s") of building @next.Name?
+                    <div class="chip-row" style="margin-top:.5rem;">
+                        <button class="btn btn-primary btn-sm" @onclick="Confirm">Confirm</button>
+                        <button class="btn btn-ghost btn-sm" @onclick="() => _confirming = false">Cancel</button>
+                    </div>
+                </div>
+            }
+
+            @if (!CanUpgrade && !_confirming)
+            {
+                <p class="hint">@BlockedReason</p>
+            }
+        </div>
+    }
+    else
+    {
+        <p class="action-msg">Maximum level reached — this is as good as it gets.</p>
+    }
+
+    @if (_message is not null)
+    {
+        <p class="action-msg @(_ok ? "" : "warn")">@_message</p>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public FacilityArea Area { get; set; }
+    [Parameter, EditorRequired] public Team Club { get; set; } = null!;
+    [Parameter, EditorRequired] public Career Career { get; set; } = null!;
+    [Parameter, EditorRequired] public GameService Game { get; set; } = null!;
+    [Parameter, EditorRequired] public IFacilityLevelInfo Info { get; set; } = null!;
+    [Parameter] public IFacilityLevelInfo? Next { get; set; }
+    [Parameter] public FacilityProject? Project { get; set; }
+    [Parameter, EditorRequired] public string Icon { get; set; } = "";
+    [Parameter, EditorRequired] public string StatLine { get; set; } = "";
+
+    private bool _confirming;
+    private string? _message;
+    private bool _ok;
+
+    private bool CanUpgrade => FacilityService.CanUpgrade(Club, Area, Career.Tier, out _);
+    private string BlockedReason { get { FacilityService.CanUpgrade(Club, Area, Career.Tier, out var reason); return reason; } }
+
+    private IFacilityLevelInfo TargetInfo(FacilityProject project) => Area switch
+    {
+        FacilityArea.Pitch => FacilityCatalog.Pitch[project.TargetLevel],
+        FacilityArea.Stadium => FacilityCatalog.Stadium[project.TargetLevel],
+        FacilityArea.TrainingGround => FacilityCatalog.TrainingGround[project.TargetLevel],
+        FacilityArea.Clubhouse => FacilityCatalog.Clubhouse[project.TargetLevel],
+        _ => Info,
+    };
+
+    private static int Pct(FacilityProject p) => p.TotalWeeks <= 0 ? 100 : (int)(100.0 * (p.TotalWeeks - p.WeeksRemaining) / p.TotalWeeks);
+
+    private static string Money(int pounds) => "£" + pounds.ToString("N0");
+
+    private void Confirm()
+    {
+        _ok = Game.StartFacilityUpgrade(Area, out var message);
+        _message = message;
+        _confirming = false;
+    }
+}

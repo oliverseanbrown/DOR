@@ -301,6 +301,15 @@ tr.upcoming { color: var(--muted2); }
 .stat-bar-fill { background: var(--accent); height: 100%; }
 .stat-value { text-align: right; font-family: 'Space Grotesk', sans-serif; font-variant-numeric: tabular-nums; color: var(--ink); }
 .stat-gain { color: var(--try); font-weight: 700; font-size: .78rem; }
+
+/* Facilities */
+.facility-card { display: flex; flex-direction: column; }
+.fc-head { display: flex; align-items: center; gap: .7rem; margin-bottom: .5rem; }
+.fc-icon { font-size: 1.6rem; line-height: 1; }
+.fc-level { color: var(--muted); font-size: .82rem; }
+.fc-progress { margin-top: .6rem; }
+.fc-progress .stack-row { padding: 0; border: none; font-size: .85rem; margin-bottom: .35rem; }
+.fc-next { margin-top: .3rem; }
 a { color: inherit; }
 .squad-table a { color: var(--ink); text-decoration: underline; text-decoration-color: var(--border2); }
 .squad-table a:hover { text-decoration-color: var(--accent); }

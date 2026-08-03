@@ -1,0 +1,68 @@
+@page "/career/facilities"
+@inherits CareerComponentBase
+
+<PageTitle>Facilities — Director Of Rugby</PageTitle>
+
+@if (Game.MyClub is { } club && Game.Career is { } career)
+{
+    <h1>Club Facilities</h1>
+    <p class="hint">
+        @(string.IsNullOrWhiteSpace(club.HomeGround) ? club.Name : club.HomeGround) started life
+        as a grassroots outfit — every stand, every blade of turf and every brick of the
+        clubhouse has to be earned. Invest to unlock better matchday income, faster player
+        development and fewer weeks lost to injury.
+    </p>
+
+    <div class="tile-grid g-4">
+        <div class="card stat-tile">
+            <h3>Reputation</h3>
+            <p class="stv">@FacilityService.ClubhouseInfo(club).Reputation</p>
+            <p class="hint">Driven by the clubhouse</p>
+        </div>
+        <div class="card stat-tile">
+            <h3>Capacity</h3>
+            <p class="stv">@FacilityService.StadiumInfo(club).Capacity.ToString("N0")</p>
+            <p class="hint">@FacilityService.StadiumInfo(club).Name</p>
+        </div>
+        <div class="card stat-tile">
+            <h3>Weekly sponsorship</h3>
+            <p class="stv ok">@Money(FacilityService.ClubhouseInfo(club).SponsorshipPerWeek)</p>
+            <p class="hint">@FacilityService.ClubhouseInfo(club).Name</p>
+        </div>
+        <div class="card stat-tile">
+            <h3>Projects live</h3>
+            <p class="stv">@club.FacilityProjects.Count / 4</p>
+            <p class="hint">areas under construction</p>
+        </div>
+    </div>
+
+    <div class="tile-grid g-4" style="grid-template-columns:repeat(2,1fr);">
+        <FacilityCard Area="FacilityArea.Pitch" Club="club" Career="career" Game="Game"
+                      Info="FacilityService.PitchInfo(club)"
+                      Next="FacilityService.NextLevel(club, FacilityArea.Pitch)"
+                      Project="FacilityService.ProjectFor(club, FacilityArea.Pitch)"
+                      Icon="⛳" StatLine="@($"Injury risk × {FacilityService.PitchInfo(club).InjuryMultiplier:0.00}")" />
+
+        <FacilityCard Area="FacilityArea.Stadium" Club="club" Career="career" Game="Game"
+                      Info="FacilityService.StadiumInfo(club)"
+                      Next="FacilityService.NextLevel(club, FacilityArea.Stadium)"
+                      Project="FacilityService.ProjectFor(club, FacilityArea.Stadium)"
+                      Icon="🏟" StatLine="@($"Capacity {FacilityService.StadiumInfo(club).Capacity:N0} · gate cap {Money(FacilityService.StadiumInfo(club).GateCap)}/wk")" />
+
+        <FacilityCard Area="FacilityArea.TrainingGround" Club="club" Career="career" Game="Game"
+                      Info="FacilityService.TrainingGroundInfo(club)"
+                      Next="FacilityService.NextLevel(club, FacilityArea.TrainingGround)"
+                      Project="FacilityService.ProjectFor(club, FacilityArea.TrainingGround)"
+                      Icon="🏋" StatLine="@($"Development × {FacilityService.TrainingGroundInfo(club).DevelopmentMultiplier:0.00} · recovery × {FacilityService.TrainingGroundInfo(club).InjuryRecoveryMultiplier:0.00}")" />
+
+        <FacilityCard Area="FacilityArea.Clubhouse" Club="club" Career="career" Game="Game"
+                      Info="FacilityService.ClubhouseInfo(club)"
+                      Next="FacilityService.NextLevel(club, FacilityArea.Clubhouse)"
+                      Project="FacilityService.ProjectFor(club, FacilityArea.Clubhouse)"
+                      Icon="🏛" StatLine="@($"Sponsorship {Money(FacilityService.ClubhouseInfo(club).SponsorshipPerWeek)}/wk · reputation {FacilityService.ClubhouseInfo(club).Reputation}")" />
+    </div>
+}
+
+@code {
+    private static string Money(int pounds) => "£" + pounds.ToString("N0");
+}

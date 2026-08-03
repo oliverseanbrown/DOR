@@ -1,3 +1,4 @@
+using RugbyManager.Core.Facilities;
 using RugbyManager.Core.Model;
 using RugbyManager.Core.Util;
 
@@ -30,12 +31,13 @@ public static class TrainingService
         };
 
         double coachMult = CoachMultiplier(club, focus);
+        double groundMult = FacilityService.TrainingGroundInfo(club).DevelopmentMultiplier;
         var gains = new List<AttributeGain>();
         foreach (var player in club.Squad) // the whole squad trains, not just the XV
         {
             player.Condition = Math.Clamp(player.Condition + recovery, 0, 100);
             if (focus != TrainingFocus.Rest)
-                gains.AddRange(Develop(player, focus, dice, coachMult));
+                gains.AddRange(Develop(player, focus, dice, coachMult * groundMult));
         }
 
         TrainPlaybook(club, focus, dice);
@@ -53,7 +55,7 @@ public static class TrainingService
         }
     }
 
-    private static List<AttributeGain> Develop(Player player, TrainingFocus focus, Dice dice, double coachMult)
+    private static List<AttributeGain> Develop(Player player, TrainingFocus focus, Dice dice, double facilityMult)
     {
         double ageFactor = player.Age switch
         {
@@ -71,8 +73,9 @@ public static class TrainingService
         {
             int cur = get();
             if (cur >= potential || cur >= 99) continue;
-            // Harder to improve as an attribute climbs; youth and a matching coach accelerate it.
-            double chance = 0.30 * ageFactor * (1 - cur / 100.0) * coachMult;
+            // Harder to improve as an attribute climbs; youth, a matching coach and a better
+            // training ground all accelerate it.
+            double chance = 0.30 * ageFactor * (1 - cur / 100.0) * facilityMult;
             if (dice.Chance(chance))
             {
                 int newValue = cur + 1;

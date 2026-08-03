@@ -1,3 +1,4 @@
+using RugbyManager.Core.Facilities;
 using static RugbyManager.Core.Model.Position;
 
 namespace RugbyManager.Core.Model;
@@ -34,6 +35,19 @@ public sealed class Team
 
     /// <summary>Transfer budget, in pounds.</summary>
     public int Money { get; set; }
+
+    /// <summary>
+    /// Facility levels, each 0-based starting from a literal grassroots ground — a shared
+    /// council pitch, a rope for a stand, training on the match pitch, no clubhouse at all.
+    /// See <see cref="Facilities.FacilityService"/> and <see cref="FacilityCatalog"/>.
+    /// </summary>
+    public int PitchLevel { get; set; }
+    public int StadiumLevel { get; set; }
+    public int TrainingGroundLevel { get; set; }
+    public int ClubhouseLevel { get; set; }
+
+    /// <summary>Facility upgrades currently under construction (at most one per area).</summary>
+    public List<FacilityProject> FacilityProjects { get; init; } = new();
 
     /// <summary>Coaching staff. Boost matchday ratings and training in their specialties.</summary>
     public List<Coach> Coaches { get; init; } = new();

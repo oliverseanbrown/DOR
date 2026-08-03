@@ -1,4 +1,5 @@
 using RugbyManager.Core.Competition;
+using RugbyManager.Core.Facilities;
 using RugbyManager.Core.Match;
 using RugbyManager.Core.Model;
 using RugbyManager.Core.Training;
@@ -42,6 +43,19 @@ public sealed record TeamData
     public List<Coach> Coaches { get; init; } = new();
     public List<SetPlay> Playbook { get; init; } = new();
     public Dictionary<string, int> PlayFamiliarity { get; init; } = new();
+    public int PitchLevel { get; init; }
+    public int StadiumLevel { get; init; }
+    public int TrainingGroundLevel { get; init; }
+    public int ClubhouseLevel { get; init; }
+    public List<FacilityProjectData> FacilityProjects { get; init; } = new();
+}
+
+public sealed record FacilityProjectData
+{
+    public FacilityArea Area { get; init; }
+    public int TargetLevel { get; init; }
+    public int TotalWeeks { get; init; }
+    public int WeeksRemaining { get; init; }
 }
 
 public sealed record PlayerData

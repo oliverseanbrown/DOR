@@ -1,5 +1,6 @@
 using Microsoft.JSInterop;
 using RugbyManager.Core.Competition;
+using RugbyManager.Core.Facilities;
 using RugbyManager.Core.Finance;
 using RugbyManager.Core.Generation;
 using RugbyManager.Core.Injuries;
@@ -227,6 +228,17 @@ public sealed class GameService
     }
 
     // ------------------------------------------------------------------
+    //  Facilities
+    // ------------------------------------------------------------------
+
+    public bool StartFacilityUpgrade(FacilityArea area, out string message)
+    {
+        var result = FacilityService.TryStartUpgrade(MyClub!, area, Career!.Tier, out message);
+        if (result) NotifyChanged();
+        return result;
+    }
+
+    // ------------------------------------------------------------------
     //  Playing rounds
     // ------------------------------------------------------------------
 
@@ -250,6 +262,7 @@ public sealed class GameService
 
         int position = season.BuildTable().RowFor(MyClub).Position;
         var ledger = FinanceService.ProcessWeek(MyClub, home, position, season.League.TeamCount);
+        var facilityCompletions = FacilityService.TickWeek(MyClub);
 
         var report = new RoundReport
         {
@@ -268,6 +281,7 @@ public sealed class GameService
 
         foreach (var p in newInjuries)
             RecentNews.Add($"INJURY: {p.FullName} ({p.NaturalPosition.ShortName()}) out for {p.InjuredWeeksRemaining} week(s).");
+        RecentNews.AddRange(facilityCompletions);
 
         NotifyChanged();
         return report;
@@ -360,6 +374,7 @@ public sealed class GameService
             .ToList();
         int position = season.BuildTable().RowFor(MyClub).Position;
         var ledger = FinanceService.ProcessWeek(MyClub, homeGame, position, season.League.TeamCount);
+        var facilityCompletions = FacilityService.TickWeek(MyClub);
 
         var report = new RoundReport
         {
@@ -378,6 +393,7 @@ public sealed class GameService
 
         foreach (var p in newInjuries)
             RecentNews.Add($"INJURY: {p.FullName} ({p.NaturalPosition.ShortName()}) out for {p.InjuredWeeksRemaining} week(s).");
+        RecentNews.AddRange(facilityCompletions);
 
         LiveMatch = null;
         LiveFixture = null;
