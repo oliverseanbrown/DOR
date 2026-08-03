@@ -1,0 +1,28 @@
+<div class="card stat-group">
+    <h3>@Title</h3>
+    @foreach (var (name, value) in Attrs)
+    {
+        int gain = Gains is not null && Gains.TryGetValue(name, out var g) ? g : 0;
+        <div class="stat-row">
+            <span class="stat-name">@Spaced(name)</span>
+            <div class="stat-bar-track">
+                <div class="stat-bar-fill" style="width:@(value)%"></div>
+            </div>
+            <span class="stat-value">@value</span>
+            @if (gain > 0)
+            {
+                <span class="stat-gain">+@gain</span>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public string Title { get; set; } = "";
+    [Parameter, EditorRequired] public (string Name, int Value)[] Attrs { get; set; } = Array.Empty<(string, int)>();
+    [Parameter] public IReadOnlyDictionary<string, int>? Gains { get; set; }
+
+    // Splits PascalCase attribute names into readable labels, e.g. "GoalKicking" -> "Goal Kicking".
+    private static string Spaced(string name)
+        => System.Text.RegularExpressions.Regex.Replace(name, "(?<!^)([A-Z])", " $1");
+}

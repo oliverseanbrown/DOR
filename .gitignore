@@ -1,0 +1,25 @@
+# .NET build output
+bin/
+obj/
+[Dd]ebug/
+[Rr]elease/
+*.user
+
+# Rider / VS
+.idea/
+.vs/
+*.suo
+
+# Godot 4 (added in Phase 3)
+.godot/
+.import/
+export.cfg
+export_presets.cfg
+mono_crash.*.json
+
+# Saved careers
+saves/
+
+# OS
+Thumbs.db
+.DS_Store

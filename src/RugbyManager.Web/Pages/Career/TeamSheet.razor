@@ -1,0 +1,164 @@
+@page "/career/teamsheet"
+@inherits CareerComponentBase
+
+<PageTitle>Team Sheet — Director Of Rugby</PageTitle>
+
+@if (Game.MyClub is { } club)
+{
+    var xv = new HashSet<Player>(club.Players);
+    var pool = club.Squad.Where(p => p.IsFit).OrderBy(p => p.NaturalPosition).ThenByDescending(PlayerRating.Overall).ToList();
+    var unfit = club.Squad.Where(p => !p.IsFit).ToList();
+
+    <h1>Team Sheet — @club.Name</h1>
+    <p class="hint">
+        Drag a player from the pool onto a position on the pitch to select your starting XV.
+        Out-of-position selections are allowed — a player away from their natural role won't perform quite as well there.
+        @if (club.HasManualLineup)
+        {
+            <span class="pill st-xv">CONFIRMED</span>
+        }
+    </p>
+
+    <div class="hero-actions">
+        <button class="btn btn-primary" @onclick="Confirm">Confirm lineup</button>
+        <button class="btn btn-ghost" @onclick="ResetAuto">Reset to auto-pick</button>
+        <a class="btn btn-ghost" href="/career/play">Go to Match Centre &rarr;</a>
+    </div>
+
+    <div class="teamsheet-layout">
+        <div class="card">
+            <h3>Squad pool (@pool.Count fit)</h3>
+            <div class="player-pool">
+                @foreach (var p in pool)
+                {
+                    bool inXv = xv.Contains(p);
+                    <div class="pool-player @(inXv ? "assigned" : "") @(ReferenceEquals(_dragging, p) ? "dragging" : "")"
+                         draggable="true"
+                         @ondragstart="() => StartDrag(p, null)"
+                         @ondragend="EndDrag">
+                        <span class="pp-pos">@p.NaturalPosition.ShortName()</span>
+                        <span style="flex:1;">@p.FullName</span>
+                        <span class="pp-ovr">@PlayerRating.Overall(p)</span>
+                        @if (inXv)
+                        {
+                            <span class="pill st-xv">XV</span>
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+
+        <div class="pitch-wrap">
+            @foreach (Position pos in Enum.GetValues<Position>())
+            {
+                var current = club.At(pos);
+                var (left, top) = Coords[pos];
+                <div class="pitch-spot @(_dragOverPos == pos ? "drag-over" : "")"
+                     style="left:@(left)%; top:@(top)%;"
+                     draggable="true"
+                     @ondragstart="() => StartDrag(current, pos)"
+                     @ondragend="EndDrag"
+                     @ondragover:preventDefault="true"
+                     @ondragenter="() => _dragOverPos = pos"
+                     @ondragleave="() => _dragOverPos = null"
+                     @ondrop="() => Drop(pos)">
+                    <span class="ps-num">@pos.ShirtNumber() · @pos.ShortName()</span>
+                    <span class="ps-name">@current.FullName</span>
+                    <span class="ps-meta">@PlayerRating.Overall(current) OVR @(current.NaturalPosition != pos ? $"({current.NaturalPosition.ShortName()})" : "")</span>
+                </div>
+            }
+        </div>
+    </div>
+
+    @if (unfit.Count > 0)
+    {
+        <div class="card" style="margin-top:1rem;">
+            <h3>Unavailable (injured)</h3>
+            <ul class="news-list">
+                @foreach (var p in unfit)
+                {
+                    <li>@p.NaturalPosition.ShortName() — @p.FullName (@p.InjuredWeeksRemaining week(s))</li>
+                }
+            </ul>
+        </div>
+    }
+
+    @if (_message is not null)
+    {
+        <p class="action-msg">@_message</p>
+    }
+}
+
+@code {
+    private string? _message;
+    private Player? _dragging;
+    private Position? _draggingFrom;
+    private Position? _dragOverPos;
+
+    private static readonly Dictionary<Position, (double Left, double Top)> Coords = new()
+    {
+        [Position.LooseheadProp] = (38, 94),
+        [Position.Hooker] = (50, 96),
+        [Position.TightheadProp] = (62, 94),
+        [Position.Lock4] = (44, 82),
+        [Position.Lock5] = (56, 82),
+        [Position.BlindsideFlanker] = (22, 70),
+        [Position.Number8] = (50, 68),
+        [Position.OpensideFlanker] = (78, 70),
+        [Position.ScrumHalf] = (50, 54),
+        [Position.FlyHalf] = (50, 40),
+        [Position.InsideCentre] = (38, 26),
+        [Position.OutsideCentre] = (62, 26),
+        [Position.LeftWing] = (8, 12),
+        [Position.RightWing] = (92, 12),
+        [Position.Fullback] = (50, 4),
+    };
+
+    private void StartDrag(Player p, Position? from)
+    {
+        _dragging = p;
+        _draggingFrom = from;
+    }
+
+    private void EndDrag()
+    {
+        _dragging = null;
+        _draggingFrom = null;
+        _dragOverPos = null;
+    }
+
+    private void Drop(Position pos)
+    {
+        _dragOverPos = null;
+        if (_dragging is null || !_dragging.IsFit) return;
+        var club = Game.MyClub!;
+        var incoming = _dragging;
+        var origin = _draggingFrom;
+
+        if (origin is { } fromPos && fromPos != pos)
+        {
+            var displaced = club.At(pos);
+            club.SetStarter(pos, incoming);
+            club.SetStarter(fromPos, displaced);
+        }
+        else
+        {
+            club.SetStarter(pos, incoming);
+        }
+
+        EndDrag();
+    }
+
+    private void Confirm()
+    {
+        Game.MyClub!.HasManualLineup = true;
+        _message = "Lineup confirmed for the next fixture.";
+    }
+
+    private void ResetAuto()
+    {
+        Game.MyClub!.SelectBestXV();
+        Game.MyClub.HasManualLineup = false;
+        _message = "Reset to the auto-picked strongest XV.";
+    }
+}

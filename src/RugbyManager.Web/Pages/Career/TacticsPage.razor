@@ -1,0 +1,103 @@
+@page "/career/tactics"
+@inherits CareerComponentBase
+
+<PageTitle>Tactics — Director Of Rugby</PageTitle>
+
+@if (Game.MyClub is { } club)
+{
+    <h1>Tactics — @club.Name</h1>
+    <p class="hint">Changes apply from your next match.</p>
+
+    <div class="option-cols">
+        <div class="card">
+            <h3>Playing style</h3>
+            <div class="option-list">
+                @foreach (var v in Enum.GetValues<PlayStyle>())
+                {
+                    <div class="option-row @(club.Tactics.PlayStyle.Equals(v) ? "selected" : "")" role="button" tabindex="0" @onclick="() => Update(t => t with { PlayStyle = v })">
+                        <span class="ot">@Spaced(v.ToString())</span>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <div class="card">
+            <h3>Breakdown focus</h3>
+            <div class="option-list">
+                @foreach (var v in Enum.GetValues<BreakdownFocus>())
+                {
+                    <div class="option-row @(club.Tactics.BreakdownFocus.Equals(v) ? "selected" : "")" role="button" tabindex="0" @onclick="() => Update(t => t with { BreakdownFocus = v })">
+                        <span class="ot">@Spaced(v.ToString())</span>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <div class="card">
+            <h3>Defensive line</h3>
+            <div class="option-list">
+                @foreach (var v in Enum.GetValues<DefensiveLine>())
+                {
+                    <div class="option-row @(club.Tactics.DefensiveLine.Equals(v) ? "selected" : "")" role="button" tabindex="0" @onclick="() => Update(t => t with { DefensiveLine = v })">
+                        <span class="ot">@Spaced(v.ToString())</span>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+
+    <div class="card" style="margin-top:1rem;">
+        <h3>Kicking tendency</h3>
+        <div class="slider-row">
+            <input type="range" min="0" max="100" value="@club.Tactics.KickingTendency"
+                   @oninput="e => Update(t => t with { KickingTendency = int.Parse((string)e.Value!) })" />
+        </div>
+        <div class="slider-endpoints">
+            <span>Run everything</span>
+            <span>@club.Tactics.KickingTendency%</span>
+            <span>Kick everything</span>
+        </div>
+
+        <h3 style="margin-top:1.2rem;">Penalty philosophy</h3>
+        <div class="chip-row">
+            @foreach (var v in Enum.GetValues<PenaltyPhilosophy>())
+            {
+                <span class="chip @(club.Tactics.PenaltyPhilosophy.Equals(v) ? "active" : "")" role="button" tabindex="0" @onclick="() => Update(t => t with { PenaltyPhilosophy = v })">@Spaced(v.ToString())</span>
+            }
+        </div>
+    </div>
+
+    <div class="card" style="margin-top:1rem;">
+        <h3>Set-play playbook</h3>
+        @if (club.Playbook.Count == 0)
+        {
+            <p class="hint">No plays learned yet. Visit the <a href="/career/plays">Plays</a> screen to build a playbook.</p>
+        }
+        else
+        {
+            <div class="stack-rows">
+                @foreach (var play in club.Playbook)
+                {
+                    <div class="stack-row">
+                        <span>@play.Name <span class="muted">(@play.Area)</span></span>
+                        <span>
+                            <span class="muted">@club.GetFamiliarity(play.Name)%</span>
+                            <span class="pill st-xv" style="margin-left:.5rem;">Learned</span>
+                        </span>
+                    </div>
+                }
+            </div>
+        }
+        <p class="footnote"><a href="/career/plays">Manage full playbook →</a></p>
+    </div>
+}
+
+@code {
+    private void Update(Func<Tactics, Tactics> change)
+    {
+        Game.UpdateTactics(change(Game.MyClub!.Tactics));
+    }
+
+    private static string Spaced(string name)
+        => System.Text.RegularExpressions.Regex.Replace(name, "(?<!^)([A-Z])", " $1");
+}

@@ -1,0 +1,156 @@
+@page "/match"
+@inject PlaybackSettingsService Pace
+
+<PageTitle>Match — Director Of Rugby</PageTitle>
+
+<h1>Quick match</h1>
+
+<div class="card">
+    <div class="controls" style="margin-bottom:0;">
+        <label class="seed">Seed <input type="number" @bind="_seed" /></label>
+        <button class="btn btn-primary" @onclick="() => Simulate(_seed)" disabled="@_playing">▶ Simulate</button>
+        <button class="btn btn-ghost" @onclick="RandomMatch" disabled="@_playing">🎲 Random</button>
+        <label class="seed">Commentary
+            <select value="@Pace.Pace" @onchange="OnPaceChanged">
+                <option value="Fast">Fast</option>
+                <option value="Normal">Normal</option>
+                <option value="Cinematic">Cinematic</option>
+            </select>
+        </label>
+        @if (_playing)
+        {
+            <button class="btn" @onclick="Skip">Skip ▶▶</button>
+        }
+    </div>
+</div>
+
+@if (_result is null)
+{
+    <p class="hint">Press <b>Simulate</b> to run a full 80-minute Rugby Union match, live in your browser.</p>
+}
+else
+{
+    <div class="card" style="margin-top:1rem;">
+        <div class="card-header-bar"></div>
+        <div class="scoreboard" style="border:none; margin-bottom:0;">
+            <div class="team home">
+                <span class="tn">@_result.HomeName</span>
+                <span class="sc">@_homeScore</span>
+            </div>
+            <div class="clock">@(_playing ? $"{_clock}'" : "FT")</div>
+            <div class="team away">
+                <span class="sc">@_awayScore</span>
+                <span class="tn">@_result.AwayName</span>
+            </div>
+        </div>
+
+        @if (!_playing)
+        {
+            <div class="fulltime">FULL-TIME — @_result.Winner win</div>
+            <div class="boxscore">
+                <div class="bs-col"><span>@_result.HomeShort</span></div>
+                <div class="bs-stat"><b>Tries</b> @_result.HomeStats.Tries – @_result.AwayStats.Tries</div>
+                <div class="bs-stat"><b>Cons</b> @_result.HomeStats.Conversions – @_result.AwayStats.Conversions</div>
+                <div class="bs-stat"><b>Pens</b> @_result.HomeStats.PenaltyGoals – @_result.AwayStats.PenaltyGoals</div>
+                <div class="bs-stat"><b>Poss</b> @($"{_result.HomeStats.PossessionPct:0}%") – @($"{_result.AwayStats.PossessionPct:0}%")</div>
+                <div class="bs-stat"><b>Terr</b> @($"{_result.HomeStats.TerritoryPct:0}%") – @($"{_result.AwayStats.TerritoryPct:0}%")</div>
+                <div class="bs-col"><span>@_result.AwayShort</span></div>
+            </div>
+        }
+    </div>
+
+    <div class="card" style="margin-top:1rem; padding:0;">
+        <div class="feed">
+            @foreach (var e in Enumerable.Reverse(_shown))
+            {
+                <div class="feed-line @LineClass(e)">
+                    <span class="min">@e.Minute'</span>
+                    <span class="txt">@e.Text</span>
+                </div>
+            }
+        </div>
+    </div>
+}
+
+@code {
+    private int _seed = 42;
+    private MatchResult? _result;
+    private readonly List<MatchEvent> _shown = new();
+    private int _homeScore, _awayScore, _clock;
+    private bool _playing;
+    private int _runId;
+
+    protected override async Task OnInitializedAsync() => await Pace.EnsureLoadedAsync();
+
+    private static Team MakeHome(int s) => SquadGenerator.Generate("Ashcombe RFC", "ASH", 68, new Tactics
+    {
+        PlayStyle = PlayStyle.ForwardsOriented,
+        BreakdownFocus = BreakdownFocus.Aggressive,
+        PenaltyPhilosophy = PenaltyPhilosophy.Pragmatic,
+        KickingTendency = 55,
+    }, s + 1);
+
+    private static Team MakeAway(int s) => SquadGenerator.Generate("Riverside Rangers", "RIV", 66, new Tactics
+    {
+        PlayStyle = PlayStyle.Expansive,
+        DefensiveLine = DefensiveLine.Rush,
+        PenaltyPhilosophy = PenaltyPhilosophy.Ambitious,
+        KickingTendency = 30,
+    }, s + 2);
+
+    private async Task OnPaceChanged(ChangeEventArgs e)
+        => await Pace.SetPaceAsync(Enum.Parse<CommentaryPace>((string)e.Value!));
+
+    private void RandomMatch()
+    {
+        _seed = Random.Shared.Next(1, 100_000);
+        _ = Simulate(_seed);
+    }
+
+    private async Task Simulate(int seed)
+    {
+        var result = new MatchEngine(MakeHome(seed), MakeAway(seed), seed).Simulate();
+        _result = result;
+        _shown.Clear();
+        _homeScore = _awayScore = _clock = 0;
+        int run = ++_runId;
+        _playing = true;
+        StateHasChanged();
+
+        for (int i = 0; i < result.Events.Count; i++)
+        {
+            if (run != _runId) return; // a newer simulation superseded this one
+            var e = result.Events[i];
+            _shown.Add(e);
+            _homeScore = e.HomeScore;
+            _awayScore = e.AwayScore;
+            _clock = e.Minute;
+            StateHasChanged();
+            if (i < result.Events.Count - 1)
+                await Task.Delay(PlaybackTiming.DelayMs(e, Pace.Pace));
+        }
+
+        if (run == _runId) { _playing = false; StateHasChanged(); }
+    }
+
+    private void Skip()
+    {
+        if (_result is null) return;
+        _runId++; // cancels the playback loop
+        _shown.Clear();
+        _shown.AddRange(_result.Events);
+        _homeScore = _result.HomeScore;
+        _awayScore = _result.AwayScore;
+        _clock = _result.Events[^1].Minute;
+        _playing = false;
+    }
+
+    private static string LineClass(MatchEvent e) => e.Type switch
+    {
+        MatchEventType.Try => "l-try",
+        MatchEventType.PenaltyGoal or MatchEventType.Conversion or MatchEventType.DropGoal => "l-kick",
+        MatchEventType.HalfTime or MatchEventType.FullTime => "l-half",
+        _ when e.Drama == Drama.Highlight => "l-drama",
+        _ => "",
+    };
+}

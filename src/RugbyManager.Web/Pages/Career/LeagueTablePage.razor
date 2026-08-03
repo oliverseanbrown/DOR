@@ -1,0 +1,48 @@
+@page "/career/table"
+@inherits CareerComponentBase
+
+<PageTitle>League Table — Director Of Rugby</PageTitle>
+
+@if (Game.Career is { } career)
+{
+    var table = career.Season.BuildTable();
+    <h1>@career.Season.League.Name</h1>
+    <p class="hint">Season @career.SeasonNumber. Your club is highlighted.</p>
+
+    var rows = table.Rows.ToList();
+    int pageCount = Math.Max(1, (int)Math.Ceiling(rows.Count / (double)PageSize));
+    _page = Math.Min(_page, pageCount - 1);
+
+    <div class="card" style="padding:0;">
+        <table class="league">
+            <thead>
+                <tr>
+                    <th class="l">#</th><th class="l">Club</th>
+                    <th>P</th><th>W</th><th>D</th><th>L</th>
+                    <th>PF</th><th>PA</th><th>PD</th><th>TF</th><th>BP</th><th>Pts</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var r in rows.Skip(_page * PageSize).Take(PageSize))
+                {
+                    <tr class="@(ReferenceEquals(r.Team, Game.MyClub) ? "me" : "")">
+                        <td>@r.Position</td>
+                        <td class="l">@r.Team.Name</td>
+                        <td>@r.Played</td><td>@r.Won</td><td>@r.Drawn</td><td>@r.Lost</td>
+                        <td>@r.PointsFor</td><td>@r.PointsAgainst</td>
+                        <td>@((r.PointsDiff >= 0 ? "+" : "") + r.PointsDiff)</td>
+                        <td>@r.TriesFor</td><td>@r.BonusPoints</td>
+                        <td class="pts">@r.LeaguePoints</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+    <Pager Page="_page" PageCount="pageCount" PageChanged="p => _page = p" />
+    <p class="footnote">Top @RugbyManager.Core.Competition.Pyramid.PromotionSpots promoted · bottom @RugbyManager.Core.Competition.Pyramid.RelegationSpots relegated.</p>
+}
+
+@code {
+    private const int PageSize = 15;
+    private int _page;
+}

@@ -1,0 +1,74 @@
+@page "/career/training"
+@inherits CareerComponentBase
+
+<PageTitle>Training — Director Of Rugby</PageTitle>
+
+@if (Game.MyClub is { } club && Game.Career is { } career)
+{
+    <h1>Training</h1>
+    <p class="hint">Squad average condition: @($"{club.Squad.Average(p => p.Condition):0}%")</p>
+
+    <div class="focus-grid">
+        @foreach (var v in Enum.GetValues<TrainingFocus>())
+        {
+            <div class="card option-row @(career.Training.Equals(v) ? "selected" : "")" role="button" tabindex="0" @onclick="() => Game.SetTraining(v)">
+                <span class="ot">@(v == TrainingFocus.SetPiece ? "Set-Piece" : v.ToString())</span>
+                <span class="od">@Description(v)</span>
+            </div>
+        }
+    </div>
+
+    <div class="card" style="margin-top:1rem;">
+        <h3>Coaching staff</h3>
+        @if (club.Coaches.Count == 0)
+        {
+            <p class="hint">No coaches hired yet.</p>
+        }
+        else
+        {
+            <div class="stack-rows">
+                @foreach (var c in club.Coaches)
+                {
+                    <div class="stack-row">
+                        <span>@c.Name <span class="muted">(@c.Specialty)</span></span>
+                        <span>Ability @c.Ability</span>
+                    </div>
+                }
+            </div>
+        }
+        <p class="footnote"><a href="/career/coaches">Manage coaching staff →</a></p>
+    </div>
+
+    @if (Game.LastRound is { } report)
+    {
+        <div class="card" style="margin-top:1rem;">
+            <h3>Last training week</h3>
+            <p>@report.Training.Focus: @(report.Training.Improvements > 0 ? $"{report.Training.Improvements} attribute gains" : "no gains") — squad condition @($"{report.Training.AverageCondition:0}%")</p>
+            @if (report.Training.Gains.Count > 0)
+            {
+                <ul class="gains-list">
+                    @foreach (var g in report.Training.Gains)
+                    {
+                        <li>@g.PlayerName: @Spaced(g.Attribute) &rarr; @g.NewValue</li>
+                    }
+                </ul>
+            }
+        </div>
+    }
+}
+
+@code {
+    private static string Description(TrainingFocus f) => f switch
+    {
+        TrainingFocus.Rest => "No development, best condition recovery.",
+        TrainingFocus.Fitness => "Stamina/strength/work rate; hardest recovery.",
+        TrainingFocus.Handling => "Handling/passing/vision.",
+        TrainingFocus.SetPiece => "Scrummaging/lineout.",
+        TrainingFocus.Defence => "Tackling/positioning/breakdown.",
+        TrainingFocus.Kicking => "Kicking/goal kicking.",
+        _ => "",
+    };
+
+    private static string Spaced(string name)
+        => System.Text.RegularExpressions.Regex.Replace(name, "(?<!^)([A-Z])", " $1");
+}

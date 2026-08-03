@@ -1,0 +1,197 @@
+@page "/career/dashboard"
+@inherits CareerComponentBase
+
+<PageTitle>Portal — Director Of Rugby</PageTitle>
+
+@if (Game.Career is not null)
+{
+    var career = Game.Career;
+    var club = career.MyClub;
+    var season = career.Season;
+    var table = season.BuildTable();
+    var row = table.RowFor(club);
+    var nextFx = NextFixture();
+    var played = PlayedFixtures().ToList();
+
+    <h1>@club.Name</h1>
+    <p class="hint">Season @career.SeasonNumber — @season.League.Name</p>
+
+    <div class="tile-grid g-2-1">
+        <div class="card tile" style="padding:0; overflow:hidden;">
+            <div class="card-header-bar" style="margin:0;"></div>
+            <div style="padding:1.4rem 1.8rem;">
+                @if (season.IsComplete)
+                {
+                    <h3>Season complete</h3>
+                    <p>Final position: @Ordinal(row.Position) of @season.League.TeamCount.</p>
+                    <a class="btn btn-primary" href="/career/newseason">🏆 Start next season</a>
+                }
+                else if (nextFx is not null)
+                {
+                    bool home = ReferenceEquals(nextFx.Home, club);
+                    var opp = home ? nextFx.Away : nextFx.Home;
+                    var oppRow = table.RowFor(opp);
+                    <div class="nf-row">
+                        <div class="nf-side">
+                            <div class="nf-eyebrow">Next fixture · Round @(nextFx.Round + 1)</div>
+                            <div class="nf-name">@(home ? club.Name : opp.Name)</div>
+                        </div>
+                        <div class="nf-mid">
+                            <div class="nf-vs">VS</div>
+                            <div class="nf-venue">@(home ? "Home" : "Away") · @club.Name</div>
+                        </div>
+                        <div class="nf-side away">
+                            <div class="nf-eyebrow">@(home ? opp.Name : club.Name)</div>
+                            <div class="nf-name">@Ordinal(oppRow.Position) place</div>
+                        </div>
+                    </div>
+                    <div class="hero-actions" style="margin:1rem 0 0;">
+                        <a class="btn btn-primary" href="/career/play">▶ Play round</a>
+                        <a class="btn btn-ghost" href="/career/teamsheet">📋 Team Sheet</a>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <div class="card">
+            <h3>Ask your staff</h3>
+            <p class="hint">Jump straight into a department.</p>
+            <div class="chip-row">
+                <a class="chip" href="/career/coaches">Coaching</a>
+                <a class="chip" href="/career/transfers">Recruitment</a>
+                <a class="chip" href="/career/training">Development</a>
+                <a class="chip" href="/career/finances">Staffing</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="tile-grid g-4">
+        <div class="card stat-tile">
+            <h3>League position</h3>
+            <p class="stv">@Ordinal(row.Position) <span class="of">/ @season.League.TeamCount</span></p>
+        </div>
+        <div class="card stat-tile">
+            <h3>Points</h3>
+            <p class="stv ok">@row.LeaguePoints</p>
+        </div>
+        <div class="card stat-tile">
+            <h3>W-D-L</h3>
+            <p class="stv">@row.Won-@row.Drawn-@row.Lost</p>
+        </div>
+        <div class="card stat-tile">
+            <h3>Points diff</h3>
+            <p class="stv @(row.PointsDiff >= 0 ? "ok" : "bad")">@(row.PointsDiff >= 0 ? "+" : "")@row.PointsDiff</p>
+        </div>
+    </div>
+
+    <div class="tile-grid g-1_3-1-1">
+        <div class="card">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <h3 style="margin:0;">Inbox</h3>
+                <div class="filter-chip-row">
+                    <span class="filter-chip active">All</span>
+                    <span class="filter-chip">New</span>
+                </div>
+            </div>
+            @if (Game.RecentNews.Count > 0)
+            {
+                @foreach (var n in Game.RecentNews.TakeLast(6).Reverse())
+                {
+                    <div class="inbox-row">
+                        <span>@n</span>
+                        <span class="tag">@Tag(n)</span>
+                    </div>
+                }
+            }
+            else
+            {
+                <p class="hint">No news yet — play a round to generate updates.</p>
+            }
+            <p class="footnote"><a href="/career/news">All news →</a></p>
+        </div>
+
+        <div class="card">
+            <h3>Calendar</h3>
+            @if (nextFx is not null)
+            {
+                <div class="cal-row"><span class="day">RD @(nextFx.Round + 1)</span><span>@(ReferenceEquals(nextFx.Home, club) ? "Home" : "Away") vs @(ReferenceEquals(nextFx.Home, club) ? nextFx.Away.Name : nextFx.Home.Name)</span></div>
+            }
+            @foreach (var fx in UpcomingAfterNext().Take(3))
+            {
+                <div class="cal-row"><span class="day">RD @(fx.Round + 1)</span><span>@(ReferenceEquals(fx.Home, club) ? "Home" : "Away") vs @(ReferenceEquals(fx.Home, club) ? fx.Away.Name : fx.Home.Name)</span></div>
+            }
+            @if (nextFx is null)
+            {
+                <p class="hint">No fixtures remaining.</p>
+            }
+            <p class="footnote"><a href="/career/fixtures">All fixtures →</a></p>
+        </div>
+
+        <div class="card">
+            <h3>Squad status</h3>
+            <div class="cal-row"><span>Fit</span><span>@club.Squad.Count(p => p.IsFit)</span></div>
+            <div class="cal-row"><span>Injured</span><span>@club.Squad.Count(p => !p.IsFit)</span></div>
+            <div class="cal-row"><span>Fatigued (&lt;70%)</span><span>@club.Squad.Count(p => p.IsFit && p.Condition < 70)</span></div>
+            <div class="cal-row" style="border-bottom:none;">
+                <span>Form</span>
+                <span class="form-guide">
+                    @foreach (var r in played.TakeLast(5))
+                    {
+                        <span class="fg @FormClass(r)">@FormLetter(r)</span>
+                    }
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <div class="hero-actions">
+        <button class="btn" @onclick="Save">💾 Save career</button>
+    </div>
+    @if (_saved)
+    {
+        <p class="saved-msg">Saved.</p>
+    }
+}
+
+@code {
+    private bool _saved;
+
+    private Fixture? NextFixture() => Game.Career!.Season.Fixtures
+        .Where(f => !f.IsPlayed && (ReferenceEquals(f.Home, Game.MyClub) || ReferenceEquals(f.Away, Game.MyClub)))
+        .OrderBy(f => f.Round)
+        .FirstOrDefault();
+
+    private IEnumerable<Fixture> UpcomingAfterNext() => Game.Career!.Season.Fixtures
+        .Where(f => !f.IsPlayed && (ReferenceEquals(f.Home, Game.MyClub) || ReferenceEquals(f.Away, Game.MyClub)))
+        .OrderBy(f => f.Round)
+        .Skip(1);
+
+    private IEnumerable<Fixture> PlayedFixtures() => Game.Career!.Season.Fixtures
+        .Where(f => f.IsPlayed && (ReferenceEquals(f.Home, Game.MyClub) || ReferenceEquals(f.Away, Game.MyClub)))
+        .OrderBy(f => f.Round);
+
+    private bool IsWin(Fixture f)
+    {
+        bool home = ReferenceEquals(f.Home, Game.MyClub);
+        return home ? f.Result!.HomeScore > f.Result!.AwayScore : f.Result!.AwayScore > f.Result!.HomeScore;
+    }
+
+    private bool IsDraw(Fixture f) => f.Result!.HomeScore == f.Result!.AwayScore;
+
+    private string FormLetter(Fixture f) => IsDraw(f) ? "D" : IsWin(f) ? "W" : "L";
+    private string FormClass(Fixture f) => IsDraw(f) ? "d" : IsWin(f) ? "w" : "l";
+
+    private static string Tag(string news) => news.StartsWith("INJURY", StringComparison.Ordinal) ? "Injury" : "News";
+
+    private static string Ordinal(int n)
+    {
+        if (n is >= 11 and <= 13) return $"{n}th";
+        return (n % 10) switch { 1 => $"{n}st", 2 => $"{n}nd", 3 => $"{n}rd", _ => $"{n}th" };
+    }
+
+    private async Task Save()
+    {
+        await Game.SaveAsync();
+        _saved = true;
+    }
+}

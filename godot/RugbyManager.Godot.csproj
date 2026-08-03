@@ -1,0 +1,14 @@
+<Project Sdk="Godot.NET.Sdk/4.3.0">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <EnableDynamicLoading>true</EnableDynamicLoading>
+    <Nullable>enable</Nullable>
+    <RootNamespace>RugbyManager.GodotApp</RootNamespace>
+  </PropertyGroup>
+
+  <!-- The whole point of the architecture: the visual layer references the engine-agnostic
+       simulation core and plays back what it produces. -->
+  <ItemGroup>
+    <ProjectReference Include="..\src\RugbyManager.Core\RugbyManager.Core.csproj" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,14 @@
+; Godot 4 project file for the RugbyManager visual layer (Phase 3 scaffold).
+; Open this folder in the Godot 4 editor (.NET/Mono version) to build and run.
+
+config_version=5
+
+[application]
+
+config/name="RugbyManager"
+run/main_scene="res://scenes/Main.tscn"
+config/features=PackedStringArray("4.3", "C#", "Forward Plus")
+
+[dotnet]
+
+project/assembly_name="RugbyManager.Godot"

@@ -1,0 +1,72 @@
+@page "/career/plays"
+@inherits CareerComponentBase
+
+<PageTitle>Set Plays — Director Of Rugby</PageTitle>
+
+@if (Game.MyClub is { } club)
+{
+    var known = new HashSet<string>(club.Playbook.Select(p => p.Name));
+
+    <h1>Set-play library</h1>
+    <p class="hint">Playbook: @club.Playbook.Count / @GameService.MaxPlaybook. Familiarity grows with matching training and match reps — and the better-known a play, the more the opposition can scout it.</p>
+
+    var plays = SetPlayLibrary.All.ToList();
+    int pageCount = Math.Max(1, (int)Math.Ceiling(plays.Count / (double)PageSize));
+    _page = Math.Min(_page, pageCount - 1);
+
+    <div class="card" style="padding:0;">
+        <table class="league">
+            <thead>
+                <tr><th class="l">Area</th><th class="l">Name</th><th>Diff</th><th class="l">Key positions</th><th class="l">Coach</th><th>Familiarity</th><th class="l">Status</th><th></th></tr>
+            </thead>
+            <tbody>
+                @foreach (var play in plays.Skip(_page * PageSize).Take(PageSize))
+                {
+                    int coachRating = club.CoachRating(play.Coaching);
+                    bool inBook = known.Contains(play.Name);
+                    int familiarity = club.GetFamiliarity(play.Name);
+                    <tr>
+                        <td class="l">@play.Area</td>
+                        <td class="l">@play.Name</td>
+                        <td>@play.Difficulty</td>
+                        <td class="l">@string.Join("/", play.KeyPositions.Select(p => p.ShortName()))</td>
+                        <td class="l">@play.Coaching @(coachRating > 0 ? $"({coachRating})" : "")</td>
+                        <td>@(inBook ? $"{familiarity}%" : "—")</td>
+                        <td class="l">@(inBook ? "In playbook" : "")</td>
+                        <td>
+                            @if (inBook)
+                            {
+                                <button class="btn btn-sm" @onclick="() => Unlearn(play)">Drop</button>
+                            }
+                            else
+                            {
+                                <button class="btn btn-sm btn-primary" @onclick="() => Learn(play)">Learn</button>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+    <Pager Page="_page" PageCount="pageCount" PageChanged="p => _page = p" />
+    <p class="footnote">A newly learned play starts at modest familiarity — it takes training and game time to become truly dangerous. A very well-known play run often in the same match can get read and turned over.</p>
+
+    @if (_message is not null)
+    {
+        <p class="action-msg">@_message</p>
+    }
+}
+
+@code {
+    private const int PageSize = 8;
+    private int _page;
+    private string? _message;
+
+    private void Learn(SetPlay play) => Game.LearnPlay(play, out _message);
+
+    private void Unlearn(SetPlay play)
+    {
+        Game.UnlearnPlay(play);
+        _message = $"Dropped {play.Name}.";
+    }
+}

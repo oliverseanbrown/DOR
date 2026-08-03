@@ -1,0 +1,534 @@
+@page "/career/play"
+@inherits CareerComponentBase
+@inject PlaybackSettingsService Pace
+
+<PageTitle>Match Centre — Director Of Rugby</PageTitle>
+
+@if (Game.MyClub is { } club && Game.Career is { } career)
+{
+    var season = career.Season;
+
+    <h1>Match Centre</h1>
+
+    @if (season.IsComplete)
+    {
+        <div class="card">
+            <h3>Season complete</h3>
+            <p>Head to the dashboard or start next season.</p>
+            <div class="hero-actions">
+                <a class="btn" href="/career/dashboard">Dashboard</a>
+                <a class="btn btn-primary" href="/career/newseason">🏆 Start next season</a>
+            </div>
+        </div>
+    }
+    else if (_report is not null)
+    {
+        @* ---------- Full-time report ---------- *@
+        var result = _report.MyResult;
+        @if (result is not null)
+        {
+            @RenderScorePanel(result.HomeName, result.AwayName, result.HomeScore, result.AwayScore, "FT", _finalEvents)
+        }
+
+        <div class="card">
+            <h3>Round report</h3>
+            <p>Training (@_report.Training.Focus): @(_report.Training.Improvements > 0 ? $"{_report.Training.Improvements} attribute gains" : "no gains") — condition @($"{_report.Training.AverageCondition:0}%")</p>
+            @if (_report.Training.Gains.Count > 0)
+            {
+                <ul class="gains-list">
+                    @foreach (var g in _report.Training.Gains)
+                    {
+                        <li>@g.PlayerName: @Spaced(g.Attribute) &rarr; @g.NewValue</li>
+                    }
+                </ul>
+            }
+            @foreach (var p in _report.NewInjuries)
+            {
+                <p class="warn">INJURY: @p.FullName (@p.NaturalPosition.ShortName()) out for @p.InjuredWeeksRemaining week(s).</p>
+            }
+            <p>Finances: @(_report.Ledger.Net >= 0 ? "+" : "-")@Money(Math.Abs(_report.Ledger.Net)) this week. Balance @Money(club.Money).</p>
+            <p>League position: @_report.TablePosition, @_report.LeaguePoints pts.</p>
+        </div>
+
+        @if (result is not null)
+        {
+            @RenderMatchStats(result.HomeStats, result.AwayStats)
+        }
+
+        @if (_finalHomeStats.Count > 0 || _finalAwayStats.Count > 0)
+        {
+            @RenderTeamTabs(_finalHomeName, _finalAwayName, _finalHomeStats, _finalAwayStats, _finalHomeTeam, _finalAwayTeam)
+        }
+
+        <div class="hero-actions">
+            <button class="btn btn-primary" @onclick="BackToDashboard">Continue ▶</button>
+        </div>
+    }
+    else if (_kickedOff)
+    {
+        @* ---------- Live match ---------- *@
+        var engine = Game.LiveMatch;
+        int homeScore = engine?.HomeScore ?? 0;
+        int awayScore = engine?.AwayScore ?? 0;
+        var events = engine?.Events ?? Array.Empty<MatchEvent>();
+        var important = ImportantEvents(events);
+
+        @if (engine is null)
+        {
+            <div class="card">
+                <h3>Bye week</h3>
+                <p>Your club has no fixture this round.</p>
+                <div class="hero-actions">
+                    <button class="btn btn-primary" @onclick="FinishAndReport">Continue ▶</button>
+                </div>
+            </div>
+        }
+        else
+        {
+        <div class="controls">
+            <label class="seed">Commentary
+                <select value="@Pace.Pace" @onchange="OnPaceChanged">
+                    <option value="Fast">Fast</option>
+                    <option value="Normal">Normal</option>
+                    <option value="Cinematic">Cinematic</option>
+                </select>
+            </label>
+            @if (!_finished)
+            {
+                <button class="btn @(_paused ? "btn-primary" : "")" @onclick="TogglePause">@(_paused ? "▶ Resume" : "⏸ Pause")</button>
+                <button class="btn" @onclick="SkipToEnd">Skip ▶▶</button>
+            }
+        </div>
+
+        @if (_paused && !_finished)
+        {
+            <div class="paused-banner">Paused</div>
+        }
+
+        @RenderScorePanel(Game.LiveFixture?.Home.Name ?? "Home", Game.LiveFixture?.Away.Name ?? "Away", homeScore, awayScore,
+            _finished ? "FT" : (events.Count > 0 ? $"{events[^1].Minute}'" : "0'"), events)
+
+        @if (_finished)
+        {
+            <div class="hero-actions">
+                <button class="btn btn-primary" @onclick="FinishAndReport">See round report ▶</button>
+            </div>
+        }
+
+        @if (_paused && !_finished)
+        {
+            <div class="card sub-panel">
+                <h3>Substitutions (@_subsUsed / @MaxSubs used)</h3>
+                @if (_subsUsed >= MaxSubs)
+                {
+                    <p class="hint">No substitutions remaining.</p>
+                }
+                else
+                {
+                    var bench = club.Squad.Where(p => p.IsFit && !club.Players.Contains(p)).ToList();
+                    <div class="form-row">
+                        <label>Position off
+                            <select @bind="_subPositionValue">
+                                @foreach (Position pos in Enum.GetValues<Position>())
+                                {
+                                    <option value="@((int)pos)">@pos.ShortName() — @club.At(pos).FullName</option>
+                                }
+                            </select>
+                        </label>
+                        <label>Player on
+                            <select @bind="_subIncomingIndex">
+                                @foreach (var (p, idx) in bench.Select((p, i) => (p, club.Squad.IndexOf(p))))
+                                {
+                                    <option value="@idx">@p.FullName (@p.NaturalPosition.ShortName(), OVR @PlayerRating.Overall(p))</option>
+                                }
+                            </select>
+                        </label>
+                        <button class="btn btn-primary" @onclick="MakeSubstitution" disabled="@(bench.Count == 0)">Make substitution</button>
+                    </div>
+                }
+            </div>
+
+            <div class="card">
+                <h3>Tactics — live</h3>
+                <div class="tactics-inline">
+                    <label>Style
+                        <select value="@club.Tactics.PlayStyle" @onchange="e => UpdateTactics(t => t with { PlayStyle = Enum.Parse<PlayStyle>((string)e.Value!) })">
+                            @foreach (var v in Enum.GetValues<PlayStyle>()) { <option value="@v">@v</option> }
+                        </select>
+                    </label>
+                    <label>Breakdown
+                        <select value="@club.Tactics.BreakdownFocus" @onchange="e => UpdateTactics(t => t with { BreakdownFocus = Enum.Parse<BreakdownFocus>((string)e.Value!) })">
+                            @foreach (var v in Enum.GetValues<BreakdownFocus>()) { <option value="@v">@v</option> }
+                        </select>
+                    </label>
+                    <label>Defence
+                        <select value="@club.Tactics.DefensiveLine" @onchange="e => UpdateTactics(t => t with { DefensiveLine = Enum.Parse<DefensiveLine>((string)e.Value!) })">
+                            @foreach (var v in Enum.GetValues<DefensiveLine>()) { <option value="@v">@v</option> }
+                        </select>
+                    </label>
+                    <label>Penalty
+                        <select value="@club.Tactics.PenaltyPhilosophy" @onchange="e => UpdateTactics(t => t with { PenaltyPhilosophy = Enum.Parse<PenaltyPhilosophy>((string)e.Value!) })">
+                            @foreach (var v in Enum.GetValues<PenaltyPhilosophy>()) { <option value="@v">@v</option> }
+                        </select>
+                    </label>
+                </div>
+            </div>
+        }
+
+        <div class="mc-layout">
+            <div class="mc-stats-col">
+                @if (engine is not null)
+                {
+                    @RenderMatchStats(engine.HomeStats, engine.AwayStats)
+                }
+                @if (_homeStats.Count > 0 || _awayStats.Count > 0)
+                {
+                    @RenderTeamTabs(Game.LiveFixture?.Home.Name ?? "Home", Game.LiveFixture?.Away.Name ?? "Away",
+                        _homeStats, _awayStats, Game.LiveFixture?.Home, Game.LiveFixture?.Away)
+                }
+            </div>
+            <div class="mc-feed-col">
+                <div class="card feed-panel" style="padding:0;">
+                    <h3 style="padding:1rem 1.2rem 0;">Commentary</h3>
+                    <div class="feed">
+                        @foreach (var e in Enumerable.Reverse(important))
+                        {
+                            <div class="feed-line @LineClass(e)">
+                                <span class="min">@e.Minute'</span>
+                                <span class="txt">@e.Text</span>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+        }
+    }
+    else
+    {
+        @* ---------- Pre-kickoff ---------- *@
+        var nextFx = NextFixture(club, season);
+        @if (nextFx is not null)
+        {
+            bool home = ReferenceEquals(nextFx.Home, club);
+            var opp = home ? nextFx.Away : nextFx.Home;
+            <div class="card">
+                <h3>Round @(nextFx.Round + 1)</h3>
+                <p>@(home ? "HOME" : "AWAY") vs <b>@opp.Name</b></p>
+                <p class="hint">
+                    @if (club.HasManualLineup) { <span>Lineup confirmed on the Team Sheet.</span> }
+                    else { <span>No lineup confirmed — the strongest available XV will be auto-selected.</span> }
+                </p>
+                <div class="hero-actions">
+                    <a class="btn" href="/career/teamsheet">📋 Team Sheet</a>
+                    <button class="btn btn-primary" @onclick="KickOff">▶ Kick off</button>
+                    <button class="btn" @onclick="SimSeason">⏭ Sim rest of season</button>
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="card">
+                <h3>Round @(season.NextRound + 1)</h3>
+                <p>Your club has a bye this round.</p>
+                <div class="hero-actions">
+                    <button class="btn btn-primary" @onclick="KickOff">▶ Play round</button>
+                </div>
+            </div>
+        }
+    }
+}
+
+@code {
+    private const int MaxSubs = 8;
+    private static readonly (MatchEventType Type, string Label)[] ScoringRows =
+    {
+        (MatchEventType.Try, "Tries"),
+        (MatchEventType.Conversion, "Conversions"),
+        (MatchEventType.PenaltyGoal, "Penalties"),
+        (MatchEventType.DropGoal, "Drop goals"),
+    };
+
+    private bool _kickedOff;
+    private bool _paused;
+    private bool _finished;
+    private int _subsUsed;
+    private int _runId;
+    private RoundReport? _report;
+
+    private List<(Player Player, PlayerMatchStats Stats)> _homeStats = new();
+    private List<(Player Player, PlayerMatchStats Stats)> _awayStats = new();
+    private List<(Player Player, PlayerMatchStats Stats)> _finalHomeStats = new();
+    private List<(Player Player, PlayerMatchStats Stats)> _finalAwayStats = new();
+    private IReadOnlyList<MatchEvent> _finalEvents = Array.Empty<MatchEvent>();
+    private Team? _finalHomeTeam;
+    private Team? _finalAwayTeam;
+    private string _finalHomeName = "";
+    private string _finalAwayName = "";
+
+    private int _subPositionValue = (int)Position.LooseheadProp;
+    private int _subIncomingIndex = -1;
+    private int _activeTeamTab; // 0 = home, 1 = away
+
+    protected override async Task OnInitializedAsync() => await Pace.EnsureLoadedAsync();
+
+    private static Fixture? NextFixture(Team club, Season season) => season.Fixtures
+        .Where(f => !f.IsPlayed && (ReferenceEquals(f.Home, club) || ReferenceEquals(f.Away, club)))
+        .OrderBy(f => f.Round)
+        .FirstOrDefault();
+
+    private async Task OnPaceChanged(ChangeEventArgs e)
+        => await Pace.SetPaceAsync(Enum.Parse<CommentaryPace>((string)e.Value!));
+
+    private void KickOff()
+    {
+        Game.StartMatchCentre();
+        _kickedOff = true;
+        _paused = false;
+        _finished = false;
+        _subsUsed = 0;
+        _report = null;
+
+        if (Game.LiveMatch is null)
+        {
+            _finished = true; // a bye — nothing to step through
+            return;
+        }
+        _ = RunLoop();
+    }
+
+    private async Task RunLoop()
+    {
+        int run = ++_runId;
+        while (true)
+        {
+            if (run != _runId) return;
+            if (_paused) { await Task.Delay(120); continue; }
+
+            bool done = Game.StepLiveMatch();
+            RefreshLiveStats();
+            StateHasChanged();
+
+            if (done) { _finished = true; return; }
+
+            var events = Game.LiveMatch!.Events;
+            if (events.Count > 0)
+                await Task.Delay(PlaybackTiming.DelayMs(events[^1], Pace.Pace));
+        }
+    }
+
+    private void TogglePause() => _paused = !_paused;
+
+    private void SkipToEnd()
+    {
+        _runId++; // stop the background loop
+        _paused = false;
+        while (Game.LiveMatch is not null && !Game.LiveMatch.IsComplete) Game.StepLiveMatch();
+        RefreshLiveStats();
+        _finished = true;
+    }
+
+    private void RefreshLiveStats()
+    {
+        if (Game.LiveMatch is null || Game.LiveFixture is null) { _homeStats = new(); _awayStats = new(); return; }
+        var home = Game.LiveFixture.Home;
+        var away = Game.LiveFixture.Away;
+        var stats = Game.LiveMatch.PlayerStats;
+        _homeStats = stats.Where(kv => home.Squad.Contains(kv.Key))
+            .OrderByDescending(kv => home.Players.Contains(kv.Key))
+            .ThenByDescending(kv => kv.Value.Rating)
+            .Select(kv => (kv.Key, kv.Value)).ToList();
+        _awayStats = stats.Where(kv => away.Squad.Contains(kv.Key))
+            .OrderByDescending(kv => away.Players.Contains(kv.Key))
+            .ThenByDescending(kv => kv.Value.Rating)
+            .Select(kv => (kv.Key, kv.Value)).ToList();
+    }
+
+    private void MakeSubstitution()
+    {
+        if (_subsUsed >= MaxSubs || _subIncomingIndex < 0) return;
+        var incoming = Game.MyClub!.Squad[_subIncomingIndex];
+        Game.Substitute((Position)_subPositionValue, incoming);
+        _subsUsed++;
+        _subIncomingIndex = -1;
+        RefreshLiveStats();
+    }
+
+    private void UpdateTactics(Func<Tactics, Tactics> change)
+    {
+        Game.MyClub!.Tactics = change(Game.MyClub.Tactics);
+        Game.LogLiveTacticsChange();
+    }
+
+    private void FinishAndReport()
+    {
+        // Snapshot everything needed for the report before FinishMatchCentre() discards the engine.
+        _finalHomeStats = _homeStats;
+        _finalAwayStats = _awayStats;
+        _finalHomeTeam = Game.LiveFixture?.Home;
+        _finalAwayTeam = Game.LiveFixture?.Away;
+        _finalHomeName = Game.LiveFixture?.Home.Name ?? "";
+        _finalAwayName = Game.LiveFixture?.Away.Name ?? "";
+        _finalEvents = Game.LiveMatch?.Events.ToList() ?? new List<MatchEvent>();
+
+        _report = Game.FinishMatchCentre();
+        _kickedOff = false;
+    }
+
+    private void BackToDashboard()
+    {
+        _report = null;
+        _finalHomeStats = new();
+        _finalAwayStats = new();
+    }
+
+    private void SimSeason() => Game.PlayToSeasonEnd();
+
+    private static string Money(int pounds) => "£" + pounds.ToString("N0");
+
+    private static string Spaced(string name)
+        => System.Text.RegularExpressions.Regex.Replace(name, "(?<!^)([A-Z])", " $1");
+
+    /// <summary>Only the moments worth putting in front of a manager: scores, half/full-time,
+    /// the tense back-and-forth of a breakaway sequence (already flagged Highlight by the
+    /// engine for cinematic pacing), and the manager's own subs/tactics changes.</summary>
+    private static List<MatchEvent> ImportantEvents(IReadOnlyList<MatchEvent> events)
+        => events.Where(e => e.Drama == Drama.Highlight
+                || e.Type is MatchEventType.Substitution or MatchEventType.TacticsChange)
+            .ToList();
+
+    private static string LineClass(MatchEvent e) => e.Type switch
+    {
+        MatchEventType.Try => "l-try",
+        MatchEventType.PenaltyGoal or MatchEventType.Conversion or MatchEventType.DropGoal => "l-kick",
+        MatchEventType.HalfTime or MatchEventType.FullTime => "l-half",
+        _ when e.Drama == Drama.Highlight => "l-drama",
+        _ => "",
+    };
+
+    private RenderFragment RenderScorePanel(string homeName, string awayName, int homeScore, int awayScore, string clock, IReadOnlyList<MatchEvent> events) => @<div class="card mc-score-panel">
+        <div class="card-header-bar" style="margin:-1.1rem -1.3rem .9rem;"></div>
+        <div class="scoreboard" style="border:none; margin-bottom:0; background:none;">
+            <div class="team home"><span class="tn">@homeName</span><span class="sc">@homeScore</span></div>
+            <div class="clock">@clock</div>
+            <div class="team away"><span class="sc">@awayScore</span><span class="tn">@awayName</span></div>
+        </div>
+        <div class="mc-summary-grid">
+            @foreach (var (type, label) in ScoringRows)
+            {
+                var home = ScorersOf(events, type, 0);
+                var away = ScorersOf(events, type, 1);
+                if (home.Count == 0 && away.Count == 0) { continue; }
+                <div class="mc-summary-col mc-summary-home">@RenderScorers(home)</div>
+                <div class="mc-summary-label">@label</div>
+                <div class="mc-summary-col mc-summary-away">@RenderScorers(away)</div>
+            }
+        </div>
+    </div>;
+
+    private RenderFragment RenderScorers(List<(string Name, int Minute)> scorers) => @<span>
+        @if (scorers.Count == 0)
+        {
+            <span class="muted">—</span>
+        }
+        else
+        {
+            @foreach (var (name, minute) in scorers)
+            {
+                <span class="scorer-chip">@name <span class="min">@minute'</span></span>
+            }
+        }
+    </span>;
+
+    private static List<(string Name, int Minute)> ScorersOf(IReadOnlyList<MatchEvent> events, MatchEventType type, int team)
+        => events.Where(e => e.Type == type && e.Team == team && e.Scorer is not null)
+            .Select(e => (e.Scorer!, e.Minute))
+            .ToList();
+
+    private RenderFragment RenderTeamTabs(string homeName, string awayName,
+        List<(Player Player, PlayerMatchStats Stats)> homeRows, List<(Player Player, PlayerMatchStats Stats)> awayRows,
+        Team? homeTeam, Team? awayTeam) => @<div class="card">
+        <div class="team-tabs">
+            <div class="team-tab @(_activeTeamTab == 0 ? "active" : "")" role="button" tabindex="0" @onclick="() => _activeTeamTab = 0">@homeName</div>
+            <div class="team-tab @(_activeTeamTab == 1 ? "active" : "")" role="button" tabindex="0" @onclick="() => _activeTeamTab = 1">@awayName</div>
+        </div>
+        @(_activeTeamTab == 0 ? RenderStatsTable(homeRows, homeTeam) : RenderStatsTable(awayRows, awayTeam))
+    </div>;
+
+    /// <summary>Possession is only finalised into a percentage at full time; computing it from
+    /// the raw accumulated minutes instead means the same code works live and post-match.</summary>
+    private static (double Home, double Away) SharePct(double homeMinutes, double awayMinutes)
+    {
+        double total = homeMinutes + awayMinutes;
+        double home = total > 0 ? 100 * homeMinutes / total : 50;
+        return (home, 100 - home);
+    }
+
+    private RenderFragment RenderMatchStats(MatchStats home, MatchStats away) => @<div class="card" style="margin-bottom:1rem;">
+        <h3>Match stats</h3>
+        @{
+            var (possHome, possAway) = SharePct(home.PossessionMinutes, away.PossessionMinutes);
+            var (terrHome, terrAway) = SharePct(home.TerritoryMinutes, away.TerritoryMinutes);
+        }
+        @RenderCompareBar("Possession", possHome, possAway, $"{possHome:0}%", $"{possAway:0}%")
+        @RenderCompareBar("Territory", terrHome, terrAway, $"{terrHome:0}%", $"{terrAway:0}%")
+        @RenderCompareCount("Line breaks", home.LineBreaks, away.LineBreaks)
+        @RenderCompareCount("Turnovers won", home.TurnoversWon, away.TurnoversWon)
+        @RenderCompareCount("Penalties conceded", home.PenaltiesConceded, away.PenaltiesConceded)
+        @RenderCompareCount("Knock-ons", home.KnockOns, away.KnockOns)
+    </div>;
+
+    private RenderFragment RenderCompareCount(string label, int home, int away)
+    {
+        var (h, a) = SharePct(home, away);
+        return RenderCompareBar(label, h, a, home.ToString(), away.ToString());
+    }
+
+    private RenderFragment RenderCompareBar(string label, double homePct, double awayPct, string homeDisplay, string awayDisplay) => @<div class="stat-compare">
+        <div class="sc-values"><span>@homeDisplay</span><span>@awayDisplay</span></div>
+        <div class="stat-compare-bar">
+            <div class="bar-home" style="width:@(homePct)%"></div>
+            <div class="bar-away" style="width:@(awayPct)%"></div>
+        </div>
+        <div class="sc-label">@label</div>
+    </div>;
+
+    private RenderFragment RenderStatsTable(List<(Player Player, PlayerMatchStats Stats)> rows, Team? team) => builder =>
+    {
+        var seq = 0;
+        builder.OpenElement(seq++, "table");
+        builder.AddAttribute(seq++, "class", "league live-stats-table");
+        builder.OpenElement(seq++, "thead");
+        builder.OpenElement(seq++, "tr");
+        foreach (var h in new[] { "l:Pos", "l:Player", ":Carries", ":Metres", ":Beaten", ":Passes", ":Tackles", ":TOs", ":Errors", ":Rating" })
+        {
+            var parts = h.Split(':');
+            builder.OpenElement(seq++, "th");
+            if (parts[0] == "l") builder.AddAttribute(seq++, "class", "l");
+            builder.AddContent(seq++, parts[1]);
+            builder.CloseElement();
+        }
+        builder.CloseElement();
+        builder.CloseElement();
+        builder.OpenElement(seq++, "tbody");
+        foreach (var (p, s) in rows)
+        {
+            bool onPitch = team?.Players.Contains(p) ?? false;
+            builder.OpenElement(seq++, "tr");
+            builder.AddAttribute(seq++, "class", onPitch ? "on-pitch" : "");
+            builder.OpenElement(seq++, "td"); builder.AddAttribute(seq++, "class", "l"); builder.AddContent(seq++, p.NaturalPosition.ShortName()); builder.CloseElement();
+            builder.OpenElement(seq++, "td"); builder.AddAttribute(seq++, "class", "l"); builder.AddContent(seq++, p.FullName); builder.CloseElement();
+            builder.OpenElement(seq++, "td"); builder.AddContent(seq++, s.Carries); builder.CloseElement();
+            builder.OpenElement(seq++, "td"); builder.AddContent(seq++, $"{s.MetresGained:0}"); builder.CloseElement();
+            builder.OpenElement(seq++, "td"); builder.AddContent(seq++, s.DefendersBeaten); builder.CloseElement();
+            builder.OpenElement(seq++, "td"); builder.AddContent(seq++, s.Passes); builder.CloseElement();
+            builder.OpenElement(seq++, "td"); builder.AddContent(seq++, s.Tackles); builder.CloseElement();
+            builder.OpenElement(seq++, "td"); builder.AddContent(seq++, s.TurnoversWon); builder.CloseElement();
+            builder.OpenElement(seq++, "td"); builder.AddContent(seq++, s.Errors); builder.CloseElement();
+            builder.OpenElement(seq++, "td"); builder.AddContent(seq++, s.Rating.ToString("0.0")); builder.CloseElement();
+            builder.CloseElement();
+        }
+        builder.CloseElement();
+        builder.CloseElement();
+    };
+}

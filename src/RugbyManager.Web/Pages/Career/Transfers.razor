@@ -1,0 +1,94 @@
+@page "/career/transfers"
+@inherits CareerComponentBase
+
+<PageTitle>Transfers — Director Of Rugby</PageTitle>
+
+@if (Game.MyClub is { } club && Game.Career is { } career)
+{
+    <h1>Transfer market</h1>
+    <p class="hint">Budget: <b>@Money(club.Money)</b> · scouting a player costs @Money(Scouting.ScoutCost)</p>
+
+    <div class="controls">
+        <label class="seed">Position
+            <select @bind="_posFilter" @bind:after="() => _page = 0">
+                <option value="">All</option>
+                @foreach (Position p in Enum.GetValues<Position>())
+                {
+                    <option value="@p.ShortName()">@p.ShortName()</option>
+                }
+            </select>
+        </label>
+    </div>
+
+    var players = career.Market.Available
+        .Where(p => _posFilter == "" || p.NaturalPosition.ShortName() == _posFilter)
+        .OrderBy(p => p.NaturalPosition)
+        .ThenByDescending(PlayerRating.Overall)
+        .ToList();
+    int pageCount = Math.Max(1, (int)Math.Ceiling(players.Count / (double)PageSize));
+    _page = Math.Min(_page, pageCount - 1);
+
+    <div class="card" style="padding:0;">
+        <table class="league market-table">
+            <thead>
+                <tr><th class="l">Pos</th><th class="l">Name</th><th>Age</th><th>Ability</th><th>Value</th><th class="l">vs yours</th><th></th></tr>
+            </thead>
+            <tbody>
+                @foreach (var p in players.Skip(_page * PageSize).Take(PageSize))
+                {
+                    int mine = PlayerRating.Overall(club.At(p.NaturalPosition));
+                    var (lo, hi) = Scouting.OverallRange(p);
+                    bool known = Scouting.FullyKnown(p);
+                    <tr>
+                        <td class="l">@p.NaturalPosition.ShortName()</td>
+                        <td class="l">@p.FullName</td>
+                        <td>@p.Age</td>
+                        <td class="@(known ? "" : "fog")">@(known ? hi.ToString() : $"{lo}-{hi}")</td>
+                        <td>@Money(TransferValue.Estimate(p))</td>
+                        <td class="l">@Delta(known, lo, hi, mine)</td>
+                        <td class="actions">
+                            @if (!known)
+                            {
+                                <button class="btn btn-sm btn-ghost" @onclick="() => Scout(p)">Scout</button>
+                            }
+                            <button class="btn btn-sm btn-primary" @onclick="() => Sign(p)">Sign</button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+    <Pager Page="_page" PageCount="pageCount" PageChanged="p => _page = p" />
+
+    @if (_message is not null)
+    {
+        <p class="action-msg">@_message</p>
+    }
+}
+
+@code {
+    private const int PageSize = 10;
+    private int _page;
+    private string _posFilter = "";
+    private string? _message;
+
+    private static string Money(int pounds) => "£" + pounds.ToString("N0");
+
+    private static string Delta(bool known, int lo, int hi, int mine)
+    {
+        if (!known) return lo > mine ? "upgrade" : hi < mine ? "weaker" : "unclear";
+        return hi > mine ? $"upgrade (+{hi - mine})" : hi == mine ? "same" : $"weaker ({hi - mine})";
+    }
+
+    private void Sign(Player p)
+    {
+        var result = Game.Sign(p);
+        _message = result.Message;
+    }
+
+    private void Scout(Player p)
+    {
+        Game.Scout(p, out var message);
+        _message = message;
+    }
+}

@@ -1,0 +1,98 @@
+@page "/career/player/{Index:int}"
+@inherits CareerComponentBase
+
+<PageTitle>Player — Director Of Rugby</PageTitle>
+
+@if (Game.MyClub is { } club && Index >= 0 && Index < club.Squad.Count)
+{
+    var p = club.Squad[Index];
+    var a = p.Attributes;
+    bool inXv = club.Players.Contains(p);
+
+    <a class="btn btn-sm" href="/career/squad">&larr; Back to squad</a>
+
+    <h1>@p.FullName</h1>
+    <p class="hint">
+        @p.NaturalPosition.ShortName() (@p.NaturalPosition) · Age @p.Age · Overall @PlayerRating.Overall(p)
+        · <b>@PlayerStyle.Determine(p)</b>
+        · @(!p.IsFit ? $"INJURED, {p.InjuredWeeksRemaining}w" : inXv ? "Starting XV" : "Bench")
+    </p>
+
+    <div class="cards dash-cards">
+        <div class="card">
+            <h3>Condition</h3>
+            <p class="big-stat">@p.Condition%</p>
+        </div>
+        <div class="card">
+            <h3>Potential</h3>
+            <p class="big-stat">@PotentialBand(p)</p>
+        </div>
+        <div class="card">
+            <h3>Injury risk</h3>
+            <p class="big-stat">@InjuryRiskBand(p)</p>
+        </div>
+    </div>
+
+    <div class="stat-groups">
+        <StatGroup Title="Physical" Attrs="@Physical(a)" Gains="p.TrainingGains" />
+        <StatGroup Title="Technical" Attrs="@Technical(a)" Gains="p.TrainingGains" />
+        <StatGroup Title="Mental" Attrs="@Mental(a)" Gains="p.TrainingGains" />
+    </div>
+
+    @if (p.TrainingGains.Count > 0)
+    {
+        <p class="footnote">
+            Career training gains: @string.Join(", ", p.TrainingGains.OrderByDescending(g => g.Value).Select(g => $"{Spaced(g.Key)} +{g.Value}"))
+        </p>
+    }
+}
+else
+{
+    <p class="hint">Player not found.</p>
+    <a class="btn" href="/career/squad">Back to squad</a>
+}
+
+@code {
+    [Parameter] public int Index { get; set; }
+
+    private static (string Name, int Value)[] Physical(PlayerAttributes a) => new[]
+    {
+        ("Strength", a.Strength), ("Pace", a.Pace), ("Acceleration", a.Acceleration),
+        ("Stamina", a.Stamina), ("Agility", a.Agility),
+    };
+
+    private static (string Name, int Value)[] Technical(PlayerAttributes a) => new[]
+    {
+        ("Handling", a.Handling), ("Passing", a.Passing), ("Tackling", a.Tackling),
+        ("Kicking", a.Kicking), ("GoalKicking", a.GoalKicking), ("Lineout", a.Lineout),
+        ("Scrummaging", a.Scrummaging), ("Breakdown", a.Breakdown),
+    };
+
+    private static (string Name, int Value)[] Mental(PlayerAttributes a) => new[]
+    {
+        ("DecisionMaking", a.DecisionMaking), ("Composure", a.Composure), ("Discipline", a.Discipline),
+        ("WorkRate", a.WorkRate), ("Leadership", a.Leadership), ("Positioning", a.Positioning),
+        ("Vision", a.Vision), ("Aggression", a.Aggression),
+    };
+
+    private static string PotentialBand(Player p)
+    {
+        int gap = p.Attributes.Potential - PlayerRating.Overall(p);
+        return gap switch
+        {
+            >= 15 => "High",
+            >= 5 => "Some room",
+            _ => "Fully developed",
+        };
+    }
+
+    private static string InjuryRiskBand(Player p) => p.Attributes.InjuryProneness switch
+    {
+        >= 66 => "High",
+        >= 33 => "Medium",
+        _ => "Low",
+    };
+
+    private static string Spaced(string name)
+        => System.Text.RegularExpressions.Regex.Replace(name, "(?<!^)([A-Z])", " $1");
+}

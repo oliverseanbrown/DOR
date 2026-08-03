@@ -1,0 +1,87 @@
+@page "/career/coaches"
+@inherits CareerComponentBase
+
+<PageTitle>Coaches — Director Of Rugby</PageTitle>
+
+@if (Game.MyClub is { } club && Game.Career is { } career)
+{
+    <h1>Coaching staff</h1>
+    <p class="hint">Budget: <b>@Money(club.Money)</b> · staff @club.Coaches.Count / @GameService.MaxCoaches</p>
+
+    <div class="card">
+        <h3>Your staff</h3>
+        @if (club.Coaches.Count == 0)
+        {
+            <p class="hint">No coaches hired yet.</p>
+        }
+        else
+        {
+            <table class="league">
+                <thead><tr><th class="l">Specialty</th><th class="l">Name</th><th>Ability</th><th>Wage/wk</th><th></th></tr></thead>
+                <tbody>
+                    @foreach (var c in club.Coaches.Skip(_myPage * PageSize).Take(PageSize))
+                    {
+                        <tr>
+                            <td class="l">@c.Specialty</td>
+                            <td class="l">@c.Name</td>
+                            <td>@c.Ability</td>
+                            <td>@Money(c.Wage)</td>
+                            <td><button class="btn btn-sm" @onclick="() => Fire(c)">Release</button></td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </div>
+    <Pager Page="_myPage" PageCount="Math.Max(1, (int)Math.Ceiling(club.Coaches.Count / (double)PageSize))" PageChanged="p => _myPage = p" />
+
+    <div class="card">
+        <h3>Coach market</h3>
+        @{
+            var market = career.CoachMarket.OrderBy(c => c.Specialty).ThenByDescending(c => c.Ability).ToList();
+            int marketPages = Math.Max(1, (int)Math.Ceiling(market.Count / (double)PageSize));
+            _marketPage = Math.Min(_marketPage, marketPages - 1);
+        }
+        <table class="league">
+            <thead><tr><th class="l">Specialty</th><th class="l">Name</th><th>Ability</th><th>Wage/wk</th><th></th></tr></thead>
+            <tbody>
+                @foreach (var c in market.Skip(_marketPage * PageSize).Take(PageSize))
+                {
+                    <tr>
+                        <td class="l">@c.Specialty</td>
+                        <td class="l">@c.Name</td>
+                        <td>@c.Ability</td>
+                        <td>@Money(c.Wage)</td>
+                        <td><button class="btn btn-sm btn-primary" @onclick="() => Hire(c)">Hire</button></td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+    <Pager Page="_marketPage" PageCount="Math.Max(1, (int)Math.Ceiling(career.CoachMarket.Count / (double)PageSize))" PageChanged="p => _marketPage = p" />
+
+    @if (_message is not null)
+    {
+        <p class="action-msg">@_message</p>
+    }
+}
+
+@code {
+    private const int PageSize = 8;
+    private int _myPage;
+    private int _marketPage;
+    private string? _message;
+
+    private static string Money(int pounds) => "£" + pounds.ToString("N0");
+
+    private void Hire(Coach c)
+    {
+        Game.HireCoach(c, out _message);
+    }
+
+    private void Fire(Coach c)
+    {
+        Game.FireCoach(c);
+        _message = $"Released {c.Name}.";
+    }
+}

@@ -1,0 +1,83 @@
+@page "/table"
+
+<PageTitle>League — Director Of Rugby</PageTitle>
+
+<h1>Quick season</h1>
+
+<div class="card">
+    <div class="controls" style="margin-bottom:0;">
+        <label class="seed">Seed <input type="number" @bind="_seed" /></label>
+        <button class="btn btn-primary" @onclick="() => Simulate(_seed)" disabled="@_busy">▦ Simulate season</button>
+        <button class="btn btn-ghost" @onclick="RandomSeason" disabled="@_busy">🎲 Random</button>
+    </div>
+</div>
+
+@if (_table is null)
+{
+    <p class="hint">Simulate a full 18-round season of a 10-club division. Your club (highlighted) starts mid-table.</p>
+}
+else
+{
+    <p class="caption" style="margin-top:1rem;">Final table — @_leagueName (seed @_seed). Your club is highlighted.</p>
+    var rows = _table.Rows.ToList();
+    int pageCount = Math.Max(1, (int)Math.Ceiling(rows.Count / (double)PageSize));
+    _page = Math.Min(_page, pageCount - 1);
+    <div class="card" style="padding:0;">
+        <table class="league">
+            <thead>
+                <tr>
+                    <th class="l">#</th><th class="l">Club</th>
+                    <th>P</th><th>W</th><th>D</th><th>L</th>
+                    <th>PF</th><th>PA</th><th>PD</th><th>TF</th><th>BP</th><th>Pts</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var r in rows.Skip(_page * PageSize).Take(PageSize))
+                {
+                    <tr class="@(ReferenceEquals(r.Team, _myClub) ? "me" : "")">
+                        <td>@r.Position</td>
+                        <td class="l">@r.Team.Name</td>
+                        <td>@r.Played</td><td>@r.Won</td><td>@r.Drawn</td><td>@r.Lost</td>
+                        <td>@r.PointsFor</td><td>@r.PointsAgainst</td>
+                        <td>@((r.PointsDiff >= 0 ? "+" : "") + r.PointsDiff)</td>
+                        <td>@r.TriesFor</td><td>@r.BonusPoints</td>
+                        <td class="pts">@r.LeaguePoints</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+    <Pager Page="_page" PageCount="pageCount" PageChanged="p => _page = p" />
+    <p class="footnote">Win 4 · Draw 2 · try bonus (4+ tries) +1 · losing bonus (lose by ≤7) +1 — real Rugby Union scoring.</p>
+}
+
+@code {
+    private const int PageSize = 15;
+    private int _page;
+    private int _seed = 7;
+    private LeagueTable? _table;
+    private Team? _myClub;
+    private string _leagueName = "";
+    private bool _busy;
+
+    private void RandomSeason()
+    {
+        _seed = Random.Shared.Next(1, 100_000);
+        Simulate(_seed);
+    }
+
+    private void Simulate(int seed)
+    {
+        _busy = true;
+        var league = LeagueGenerator.Generate(
+            Pyramid.Name(Pyramid.StartingTier), 10, seed,
+            firstClubQuality: 64, baseQuality: Pyramid.BaseQuality(Pyramid.StartingTier));
+        _leagueName = league.Name;
+        _myClub = league.Teams[0];
+
+        var season = league.CreateSeason(seed);
+        season.PlayAll();
+        _table = season.BuildTable();
+        _busy = false;
+    }
+}

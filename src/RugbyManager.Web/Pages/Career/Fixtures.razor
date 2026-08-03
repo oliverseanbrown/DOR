@@ -1,0 +1,55 @@
+@page "/career/fixtures"
+@inherits CareerComponentBase
+
+<PageTitle>Fixtures — Director Of Rugby</PageTitle>
+
+@if (Game.MyClub is { } club && Game.Career is { } career)
+{
+    <h1>Fixtures — @club.Name</h1>
+
+    var fixtures = career.Season.Fixtures
+        .Where(f => ReferenceEquals(f.Home, club) || ReferenceEquals(f.Away, club))
+        .OrderBy(f => f.Round)
+        .ToList();
+    int pageCount = Math.Max(1, (int)Math.Ceiling(fixtures.Count / (double)PageSize));
+    _page = Math.Min(_page, pageCount - 1);
+
+    <div class="card" style="padding:0;">
+        <table class="league fixtures-table">
+            <thead>
+                <tr><th>Rnd</th><th class="l">Venue</th><th class="l">Opponent</th><th>Score</th><th>Result</th></tr>
+            </thead>
+            <tbody>
+                @foreach (var fx in fixtures.Skip(_page * PageSize).Take(PageSize))
+                {
+                    bool home = ReferenceEquals(fx.Home, club);
+                    var opp = home ? fx.Away : fx.Home;
+                    <tr class="@(fx.IsPlayed ? "" : "upcoming")">
+                        <td>@(fx.Round + 1)</td>
+                        <td class="l">@(home ? "Home" : "Away")</td>
+                        <td class="l">@opp.Name</td>
+                        @if (fx.Result is { } r)
+                        {
+                            int my = home ? r.HomeScore : r.AwayScore;
+                            int th = home ? r.AwayScore : r.HomeScore;
+                            char o = my > th ? 'W' : my < th ? 'L' : 'D';
+                            <td>@my - @th</td>
+                            <td><span class="pill @(o == 'W' ? "st-xv" : o == 'L' ? "st-inj" : "st-bench")">@o</span></td>
+                        }
+                        else
+                        {
+                            <td>-</td>
+                            <td>-</td>
+                        }
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+    <Pager Page="_page" PageCount="pageCount" PageChanged="p => _page = p" />
+}
+
+@code {
+    private const int PageSize = 10;
+    private int _page;
+}

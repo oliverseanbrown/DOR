@@ -1,0 +1,99 @@
+@inherits LayoutComponentBase
+@implements IDisposable
+@inject GameService Game
+@inject ThemeService Theme
+
+<div class="app-shell">
+    <header class="header-bar">
+        <a href="/" style="text-decoration:none; display:flex; align-items:center; gap:.6rem; color:inherit;">
+            <svg class="crest" width="34" height="34" viewBox="0 0 48 48">
+                <defs>
+                    <linearGradient id="crestGrad" x1="0" y1="0" x2="1" y2="1">
+                        <stop offset="0" stop-color="#a855f7" />
+                        <stop offset="1" stop-color="#7c3aed" />
+                    </linearGradient>
+                </defs>
+                <path d="M24 2 L44 8 V21 C44 33.5 36 42 24 46 C12 42 4 33.5 4 21 V8 Z" fill="url(#crestGrad)" stroke="#241b3d" stroke-width="1.5" />
+                <path d="M24 5 L41 10.3 V21 C41 32 34 39.5 24 43 C14 39.5 7 32 7 21 V10.3 Z" fill="none" stroke="rgba(255,255,255,.25)" stroke-width="1" />
+                <g transform="translate(24,20) rotate(-28)">
+                    <ellipse cx="0" cy="0" rx="11" ry="6.4" fill="#f2eefc" />
+                    <path d="M-9 0 H9" stroke="#7c3aed" stroke-width="1.1" />
+                    <path d="M-3.6 -2 V2 M0 -2.6 V2.6 M3.6 -2 V2" stroke="#7c3aed" stroke-width="1" />
+                </g>
+                <text x="24" y="40.5" text-anchor="middle" font-family="Space Grotesk, sans-serif" font-weight="800" font-size="9" fill="#120c1e">@(Game.MyClub is { } c && c.Name.Length > 0 ? c.Name[0].ToString() : "D")</text>
+            </svg>
+            <span class="brand-block">
+                <span class="bb-name">@(Game.MyClub?.Name ?? "Director Of Rugby")</span>
+                <span class="bb-meta">@(Game.Career is not null ? Game.Career.Season.League.Name : "Union management sim")</span>
+            </span>
+        </a>
+
+        <nav class="header-nav">
+            @if (Game.Career is null)
+            {
+                <NavLink class="nav-item" href="/" Match="NavLinkMatch.All" title="Home"><span class="nav-icon">⌂</span><span class="nav-label">Home</span></NavLink>
+                <NavLink class="nav-item" href="/career" Match="NavLinkMatch.All" title="Career"><span class="nav-icon">◆</span><span class="nav-label">Career</span></NavLink>
+                <NavLink class="nav-item" href="match" title="Quick match"><span class="nav-icon">▶</span><span class="nav-label">Quick match</span></NavLink>
+                <NavLink class="nav-item" href="table" title="Quick season"><span class="nav-icon">▦</span><span class="nav-label">Quick season</span></NavLink>
+            }
+            else
+            {
+                <NavLink class="nav-item" href="/career/dashboard" title="Portal"><span class="nav-icon">◆</span><span class="nav-label">Portal</span></NavLink>
+                <NavLink class="nav-item" href="/career/squad" title="Squad"><span class="nav-icon">☰</span><span class="nav-label">Squad</span></NavLink>
+                <NavLink class="nav-item" href="/career/tactics" title="Tactics"><span class="nav-icon">◈</span><span class="nav-label">Tactics</span></NavLink>
+                <NavLink class="nav-item" href="/career/transfers" title="Transfers"><span class="nav-icon">⇄</span><span class="nav-label">Transfers</span></NavLink>
+                <NavLink class="nav-item" href="/career/training" title="Training"><span class="nav-icon">↑</span><span class="nav-label">Training</span></NavLink>
+                <NavLink class="nav-item" href="/career/finances" title="Finances"><span class="nav-icon">£</span><span class="nav-label">Finances</span></NavLink>
+                <NavLink class="nav-item" href="/career/play" title="Match"><span class="nav-icon">▶</span><span class="nav-label">Match</span></NavLink>
+                <NavLink class="nav-item" href="/career/table" title="League"><span class="nav-icon">▦</span><span class="nav-label">League</span></NavLink>
+            }
+        </nav>
+
+        @if (Game.Career is not null)
+        {
+            <span class="search-pill">⌕ <span>Search Director Of Rugby…</span></span>
+            <span class="budget-pill">
+                <span class="label">Budget</span>
+                <span class="value">£@Game.MyClub!.Money.ToString("N0")</span>
+            </span>
+        }
+
+        <span class="theme-pill" title="Theme">
+            <span class="theme-icon">◐</span>
+            <select value="@Theme.Theme" @onchange="OnThemeChanged">
+                <option value="Purple">Purple</option>
+                <option value="Mono">Black &amp; Green</option>
+                <option value="Light">Light</option>
+            </select>
+        </span>
+    </header>
+
+    <main class="app-main">
+        @Body
+    </main>
+
+    <footer class="app-footer">
+        Running the real <code>RugbyManager.Core</code> simulation — compiled to WebAssembly, in your browser.
+    </footer>
+</div>
+
+@code {
+    protected override void OnInitialized()
+    {
+        Game.Changed += OnChanged;
+        Theme.Changed += OnChanged;
+    }
+
+    protected override async Task OnInitializedAsync() => await Theme.EnsureLoadedAsync();
+
+    private void OnChanged() => InvokeAsync(StateHasChanged);
+
+    private async Task OnThemeChanged(ChangeEventArgs e)
+        => await Theme.SetThemeAsync(Enum.Parse<AppTheme>((string)e.Value!));
+
+    public void Dispose()
+    {
+        Game.Changed -= OnChanged;
+        Theme.Changed -= OnChanged;
+    }
+}

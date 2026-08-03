@@ -1,0 +1,10 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/RugbyManager.Console/RugbyManager.Console.csproj" />
+    <Project Path="src/RugbyManager.Core/RugbyManager.Core.csproj" />
+    <Project Path="src/RugbyManager.Web/RugbyManager.Web.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/RugbyManager.Tests/RugbyManager.Tests.csproj" />
+  </Folder>
+</Solution>

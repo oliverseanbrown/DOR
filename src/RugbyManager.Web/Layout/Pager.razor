@@ -1,0 +1,18 @@
+@if (PageCount > 1)
+{
+    <div class="pager">
+        <button class="btn btn-sm btn-ghost" disabled="@(Page == 0)" @onclick="() => Go(0)">« First</button>
+        <button class="btn btn-sm btn-ghost" disabled="@(Page == 0)" @onclick="() => Go(Page - 1)">‹ Prev</button>
+        <span class="pager-info">Page @(Page + 1) of @PageCount</span>
+        <button class="btn btn-sm btn-ghost" disabled="@(Page >= PageCount - 1)" @onclick="() => Go(Page + 1)">Next ›</button>
+        <button class="btn btn-sm btn-ghost" disabled="@(Page >= PageCount - 1)" @onclick="() => Go(PageCount - 1)">Last »</button>
+    </div>
+}
+
+@code {
+    [Parameter] public int Page { get; set; }
+    [Parameter] public int PageCount { get; set; }
+    [Parameter] public EventCallback<int> PageChanged { get; set; }
+
+    private Task Go(int p) => PageChanged.InvokeAsync(Math.Clamp(p, 0, Math.Max(0, PageCount - 1)));
+}

@@ -1,0 +1,76 @@
+@page "/career/new"
+@inject GameService Game
+@inject NavigationManager Nav
+
+<PageTitle>New Career — Director Of Rugby</PageTitle>
+
+<h1>Start your career</h1>
+
+@if (_hasSave)
+{
+    <div class="card save-card">
+        <h3>Continue saved career</h3>
+        <p>A career is saved in this browser.</p>
+        <div class="hero-actions">
+            <button class="btn btn-primary" @onclick="Continue">▶ Continue career</button>
+            <button class="btn btn-danger" @onclick="DeleteSave">🗑 Delete save</button>
+        </div>
+    </div>
+}
+
+<div class="card">
+    <h3>New career</h3>
+    <p class="hint">
+        You'll manage <b>Ashcombe RFC</b>, starting in the @Pyramid.Name(Pyramid.StartingTier) —
+        a fair, mid-table club with room to climb the pyramid.
+    </p>
+    <div class="form-row">
+        <label>Seed <input type="number" @bind="_seed" /></label>
+        <label>Division size
+            <select @bind="_teamCount">
+                <option value="8">8 clubs</option>
+                <option value="10">10 clubs</option>
+                <option value="12">12 clubs</option>
+            </select>
+        </label>
+    </div>
+    <div class="hero-actions">
+        <button class="btn btn-primary" @onclick="StartNew">🏉 Start new career</button>
+        <button class="btn" @onclick="StartRandom">🎲 Random seed</button>
+    </div>
+</div>
+
+@code {
+    private int _seed = new Random().Next(1, 100_000);
+    private int _teamCount = 10;
+    private bool _hasSave;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _hasSave = await Game.HasSaveAsync();
+    }
+
+    private void StartNew()
+    {
+        Game.StartNewCareer(_seed, _teamCount);
+        Nav.NavigateTo("/career/dashboard");
+    }
+
+    private void StartRandom()
+    {
+        _seed = Random.Shared.Next(1, 100_000);
+        StartNew();
+    }
+
+    private async Task Continue()
+    {
+        if (await Game.TryLoadAsync())
+            Nav.NavigateTo("/career/dashboard");
+    }
+
+    private async Task DeleteSave()
+    {
+        await Game.DeleteSaveAsync();
+        _hasSave = false;
+    }
+}

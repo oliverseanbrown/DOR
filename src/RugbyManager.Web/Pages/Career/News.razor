@@ -1,0 +1,29 @@
+@page "/career/news"
+@inherits CareerComponentBase
+
+<PageTitle>News — Director Of Rugby</PageTitle>
+
+<h1>News</h1>
+
+@if (Game.RecentNews.Count == 0)
+{
+    <p class="hint">No headlines yet.</p>
+}
+else
+{
+    var items = Enumerable.Reverse(Game.RecentNews).ToList();
+    int pageCount = Math.Max(1, (int)Math.Ceiling(items.Count / (double)PageSize));
+    _page = Math.Min(_page, pageCount - 1);
+    <ul class="news-list big">
+        @foreach (var n in items.Skip(_page * PageSize).Take(PageSize))
+        {
+            <li>@n</li>
+        }
+    </ul>
+    <Pager Page="_page" PageCount="pageCount" PageChanged="p => _page = p" />
+}
+
+@code {
+    private const int PageSize = 12;
+    private int _page;
+}

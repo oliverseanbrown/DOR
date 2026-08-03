@@ -1,0 +1,63 @@
+@page "/career/newseason"
+@inherits CareerComponentBase
+@inject NavigationManager Nav
+
+<PageTitle>New Season — Director Of Rugby</PageTitle>
+
+@if (_advanced)
+{
+    var career = Game.Career!;
+    <h1>Season @career.SeasonNumber — @career.Season.League.Name</h1>
+    <div class="card">
+        <h3>News</h3>
+        <ul class="news-list">
+            @foreach (var n in Game.RecentNews)
+            {
+                <li>@n</li>
+            }
+        </ul>
+    </div>
+    <div class="hero-actions">
+        <a class="btn btn-primary" href="/career/dashboard">Continue to dashboard</a>
+    </div>
+}
+else if (Game.Career is { } current)
+{
+    var season = current.Season;
+
+    @if (!season.IsComplete)
+    {
+        <div class="card">
+            <p>The season isn't finished yet.</p>
+            <a class="btn" href="/career/play">Back to matchday</a>
+        </div>
+    }
+    else
+    {
+        var row = season.BuildTable().RowFor(current.MyClub);
+        <h1>Season complete</h1>
+        <div class="card">
+            <p>Final position: @Ordinal(row.Position) of @season.League.TeamCount in @season.League.Name.</p>
+            <p>@row.Won W · @row.Drawn D · @row.Lost L · @row.LeaguePoints pts</p>
+            <div class="hero-actions">
+                <button class="btn btn-primary" @onclick="Advance">🏆 Roll into next season</button>
+            </div>
+        </div>
+    }
+}
+
+@code {
+    private bool _advanced;
+
+    private void Advance()
+    {
+        Game.AdvanceSeason();
+        _advanced = true;
+    }
+
+    private static string Ordinal(int n)
+    {
+        if (n is >= 11 and <= 13) return $"{n}th";
+        return (n % 10) switch { 1 => $"{n}st", 2 => $"{n}nd", 3 => $"{n}rd", _ => $"{n}th" };
+    }
+}

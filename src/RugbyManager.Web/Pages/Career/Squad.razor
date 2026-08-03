@@ -1,0 +1,83 @@
+@page "/career/squad"
+@inherits CareerComponentBase
+
+<PageTitle>Squad — Director Of Rugby</PageTitle>
+
+@if (Game.MyClub is { } club)
+{
+    var xv = new HashSet<Player>(club.Players);
+    var forwards = club.Squad.Where(p => xv.Contains(p) && p.NaturalPosition.IsForward()).OrderBy(p => p.NaturalPosition).ToList();
+    var backs = club.Squad.Where(p => xv.Contains(p) && p.NaturalPosition.IsBack()).OrderBy(p => p.NaturalPosition).ToList();
+    var reserves = club.Squad.Where(p => !xv.Contains(p)).OrderBy(p => p.NaturalPosition).ThenByDescending(PlayerRating.Overall).ToList();
+
+    <h1>Squad — @club.Name</h1>
+    <p class="hint">@club.Squad.Count players · tactics: @club.Tactics.PlayStyle</p>
+
+    <div class="grp-title">Forwards</div>
+    <div class="card">@GroupTable(forwards, xv, 0)</div>
+    <Pager Page="_page[0]" PageCount="PageCount(forwards.Count)" PageChanged="p => _page[0] = p" />
+
+    <div class="grp-title">Backs</div>
+    <div class="card">@GroupTable(backs, xv, 1)</div>
+    <Pager Page="_page[1]" PageCount="PageCount(backs.Count)" PageChanged="p => _page[1] = p" />
+
+    <div class="grp-title">Reserves</div>
+    <div class="card">@GroupTable(reserves, xv, 2)</div>
+    <Pager Page="_page[2]" PageCount="PageCount(reserves.Count)" PageChanged="p => _page[2] = p" />
+
+    <p class="footnote">Starting XV avg OVR: @($"{club.Players.Average(PlayerRating.Overall):0.0}") · avg condition: @($"{club.Players.Average(p => p.Condition):0}%")</p>
+
+    @if (_message is not null)
+    {
+        <p class="action-msg">@_message</p>
+    }
+}
+
+@code {
+    private const int PageSize = 8;
+    private readonly int[] _page = new int[3];
+    private string? _message;
+
+    private int PageCount(int total) => Math.Max(1, (int)Math.Ceiling(total / (double)PageSize));
+
+    private RenderFragment GroupTable(List<Player> players, HashSet<Player> xv, int groupIndex) => @<table class="league squad-table">
+        <thead>
+            <tr>
+                <th class="l">Pos</th><th class="l">Name</th><th>Age</th><th class="l">Rating</th><th class="l">Status</th><th></th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var p in players.Skip(_page[groupIndex] * PageSize).Take(PageSize))
+            {
+                var club = Game.MyClub!;
+                string status = !p.IsFit ? $"INJ {p.InjuredWeeksRemaining}w" : xv.Contains(p) ? "XV" : "bench";
+                string cls = !p.IsFit ? "st-inj" : xv.Contains(p) ? "st-xv" : "st-bench";
+                int rating = PlayerRating.Overall(p);
+                <tr>
+                    <td class="l">@p.NaturalPosition.ShortName()</td>
+                    <td class="l"><a href="@($"/career/player/{club.Squad.IndexOf(p)}")">@p.FullName</a> <span class="muted">(@p.Age)</span></td>
+                    <td>@p.Age</td>
+                    <td class="l">
+                        <div class="rating-cell">
+                            <span class="rating-bar-track"><span class="rating-bar-fill" style="width:@(rating)%"></span></span>
+                            <span class="rn">@rating</span>
+                        </div>
+                    </td>
+                    <td class="l"><span class="pill @cls">@status</span></td>
+                    <td>
+                        @if (club.Squad.Count > TransferService.MinSquad)
+                        {
+                            <button class="btn btn-sm" @onclick="() => Sell(p)">Sell</button>
+                        }
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>;
+
+    private void Sell(Player p)
+    {
+        var result = Game.Sell(p);
+        _message = result.Message;
+    }
+}

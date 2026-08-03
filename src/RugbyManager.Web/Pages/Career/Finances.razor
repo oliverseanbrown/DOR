@@ -1,0 +1,52 @@
+@page "/career/finances"
+@inherits CareerComponentBase
+
+<PageTitle>Finances — Director Of Rugby</PageTitle>
+
+@if (Game.MyClub is { } club)
+{
+    <h1>Finances — @club.Name</h1>
+    <p class="hint">Cash balance: <b>@Money(club.Money)</b></p>
+
+    var wages = FinanceService.WeeklyWageBill(club);
+    var gate = Game.LastRound?.Ledger.Gate ?? 0;
+    var net = Game.LastRound?.Ledger.Net ?? 0;
+
+    <div class="tile-grid g-4" style="grid-template-columns:repeat(3,1fr);">
+        <div class="card stat-tile">
+            <h3>Weekly wages</h3>
+            <p class="stv bad">@Money(wages)</p>
+            <p class="hint">@club.Squad.Count players + @club.Coaches.Count coaches</p>
+        </div>
+        <div class="card stat-tile">
+            <h3>Gate receipts</h3>
+            <p class="stv ok">@Money(gate)</p>
+        </div>
+        <div class="card stat-tile">
+            <h3>Net this week</h3>
+            <p class="stv @(net >= 0 ? "ok" : "bad")">@(net >= 0 ? "+" : "-")@Money(Math.Abs(net))</p>
+        </div>
+    </div>
+
+    @if (Game.LastRound is { } report)
+    {
+        <div class="card">
+            <h3>Weekly breakdown</h3>
+            <div class="stack-rows">
+                <div class="stack-row"><span>Wages</span><span class="sv neg">-@Money(report.Ledger.Wages)</span></div>
+                <div class="stack-row"><span>Sponsorship</span><span class="sv pos">+@Money(report.Ledger.Sponsorship)</span></div>
+                <div class="stack-row"><span>Gate receipts</span><span class="sv pos">+@Money(report.Ledger.Gate)</span></div>
+                <div class="stack-row"><span><b>Net</b></span><span class="sv @(report.Ledger.Net >= 0 ? "pos" : "neg")"><b>@(report.Ledger.Net >= 0 ? "+" : "-")@Money(Math.Abs(report.Ledger.Net))</b></span></div>
+            </div>
+        </div>
+    }
+
+    @if (club.Money < 0)
+    {
+        <p class="action-msg warn">WARNING: you are in the red. The board is watching the accounts.</p>
+    }
+}
+
+@code {
+    private static string Money(int pounds) => "£" + pounds.ToString("N0");
+}
