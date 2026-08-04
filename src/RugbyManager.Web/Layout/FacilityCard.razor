@@ -2,7 +2,7 @@
 @using RugbyManager.Core.Model
 @using RugbyManager.Web.Services
 
-<div class="card facility-card">
+<div class="card facility-card" id="@Id">
     <div class="fc-head">
         <span class="fc-icon">@Icon</span>
         <div>
@@ -71,6 +71,7 @@
 </div>
 
 @code {
+    [Parameter, EditorRequired] public string Id { get; set; } = "";
     [Parameter, EditorRequired] public FacilityArea Area { get; set; }
     [Parameter, EditorRequired] public Team Club { get; set; } = null!;
     [Parameter, EditorRequired] public Career Career { get; set; } = null!;

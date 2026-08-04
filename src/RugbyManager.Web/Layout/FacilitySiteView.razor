@@ -1,0 +1,16 @@
+@using RugbyManager.Core.Model
+@using RugbyManager.Web.Rendering
+
+<div class="card iso-scene-card">
+    <h3>Club Grounds</h3>
+    <p class="hint">Click any part of the site to jump to its upgrade.</p>
+    <div class="iso-scene-frame">
+        <svg viewBox="@FacilitySiteRenderer.ViewBox()" class="iso-scene" xmlns="http://www.w3.org/2000/svg">
+            @((MarkupString)FacilitySiteRenderer.BuildScene(Club))
+        </svg>
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public Team Club { get; set; } = null!;
+}

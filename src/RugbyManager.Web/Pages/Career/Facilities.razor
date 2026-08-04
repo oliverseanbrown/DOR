@@ -36,26 +36,28 @@
         </div>
     </div>
 
+    <FacilitySiteView Club="club" />
+
     <div class="tile-grid g-4" style="grid-template-columns:repeat(2,1fr);">
-        <FacilityCard Area="FacilityArea.Pitch" Club="club" Career="career" Game="Game"
+        <FacilityCard Id="facility-pitch" Area="FacilityArea.Pitch" Club="club" Career="career" Game="Game"
                       Info="FacilityService.PitchInfo(club)"
                       Next="FacilityService.NextLevel(club, FacilityArea.Pitch)"
                       Project="FacilityService.ProjectFor(club, FacilityArea.Pitch)"
                       Icon="⛳" StatLine="@($"Injury risk × {FacilityService.PitchInfo(club).InjuryMultiplier:0.00}")" />
 
-        <FacilityCard Area="FacilityArea.Stadium" Club="club" Career="career" Game="Game"
+        <FacilityCard Id="facility-stadium" Area="FacilityArea.Stadium" Club="club" Career="career" Game="Game"
                       Info="FacilityService.StadiumInfo(club)"
                       Next="FacilityService.NextLevel(club, FacilityArea.Stadium)"
                       Project="FacilityService.ProjectFor(club, FacilityArea.Stadium)"
                       Icon="🏟" StatLine="@($"Capacity {FacilityService.StadiumInfo(club).Capacity:N0} · gate cap {Money(FacilityService.StadiumInfo(club).GateCap)}/wk")" />
 
-        <FacilityCard Area="FacilityArea.TrainingGround" Club="club" Career="career" Game="Game"
+        <FacilityCard Id="facility-training" Area="FacilityArea.TrainingGround" Club="club" Career="career" Game="Game"
                       Info="FacilityService.TrainingGroundInfo(club)"
                       Next="FacilityService.NextLevel(club, FacilityArea.TrainingGround)"
                       Project="FacilityService.ProjectFor(club, FacilityArea.TrainingGround)"
                       Icon="🏋" StatLine="@($"Development × {FacilityService.TrainingGroundInfo(club).DevelopmentMultiplier:0.00} · recovery × {FacilityService.TrainingGroundInfo(club).InjuryRecoveryMultiplier:0.00}")" />
 
-        <FacilityCard Area="FacilityArea.Clubhouse" Club="club" Career="career" Game="Game"
+        <FacilityCard Id="facility-clubhouse" Area="FacilityArea.Clubhouse" Club="club" Career="career" Game="Game"
                       Info="FacilityService.ClubhouseInfo(club)"
                       Next="FacilityService.NextLevel(club, FacilityArea.Clubhouse)"
                       Project="FacilityService.ProjectFor(club, FacilityArea.Clubhouse)"

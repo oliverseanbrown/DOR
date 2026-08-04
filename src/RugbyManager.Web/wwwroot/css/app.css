@@ -303,6 +303,20 @@ tr.upcoming { color: var(--muted2); }
 .stat-gain { color: var(--try); font-weight: 700; font-size: .78rem; }
 
 /* Facilities */
+.iso-scene-card { padding: 1.2rem 1.2rem 0.6rem; }
+.iso-scene-frame { width: 100%; overflow: hidden; border-radius: 12px; background: radial-gradient(ellipse at 50% 30%, #2c3f2a, #16200f 78%); border: 1px solid var(--border); }
+.iso-scene { width: 100%; height: auto; display: block; }
+.iso-zone-link { cursor: pointer; }
+.iso-zone-link:hover polygon { filter: brightness(1.08); }
+.iso-label-text { font-family: 'Space Grotesk', sans-serif; paint-order: stroke; stroke: #16200f; stroke-width: 3px; stroke-linejoin: round; }
+.iso-badge text { font-family: 'Space Grotesk', sans-serif; }
+
+@keyframes iso-highlight {
+    0% { box-shadow: 0 0 0 3px var(--accent), 0 8px 24px rgba(var(--accent-deep-rgb),.4); }
+    100% { box-shadow: none; }
+}
+.facility-card.iso-jump { animation: iso-highlight 1.6s ease-out; }
+
 .facility-card { display: flex; flex-direction: column; }
 .fc-head { display: flex; align-items: center; gap: .7rem; margin-bottom: .5rem; }
 .fc-icon { font-size: 1.6rem; line-height: 1; }
